@@ -1,0 +1,296 @@
+# Developer Notes – Obsidian Daily Notes → ICS
+
+This document explains how the single HTML file works and how to modify or extend it.
+
+The entire app lives in one file:
+
+- `obsidian-daily-notes-to-ics.html`
+
+It contains:
+
+- HTML structure (buttons, status, preview).
+- Small CSS block for layout/typography.
+- Vanilla JavaScript for:
+  - Picking a folder.
+  - Recursively scanning `.md` files.
+  - Parsing tasks and building events.
+  - Generating the ICS file for download.
+
+---
+
+## High‑level architecture
+
+1. The user opens the HTML via `http://localhost/...` in a supported browser.
+2. Clicking "Pick daily-notes folder" calls `window.showDirectoryPicker()`, returning a directory handle to the chosen folder.[web:23]
+3. Clicking "Scan & preview events" triggers a **recursive walk** of that directory tree:
+   - For every `.md` file, read contents and extract events.
+4. All events are stored in `parsedEvents` (an array of objects).
+5. Clicking "Download .ics" constructs a text representation of an iCalendar file and downloads it as `text/calendar`.
+
+No external libraries or frameworks are used.
+
+---
+
+## Key functions
+
+### 1. `dateFromFilename(name)`
+
+```js
+function dateFromFilename(name) {
+  const base = name.replace(/\.md$/i, '');
+  const m = base.match(/(\d{4})\s(\\d{2})(\\d{2})/);
+  if (!m) return null;
+  const [_, y, mo, d] = m;
+  return { year: Number(y), month: Number(mo), day: Number(d) };
+}
+```
+
+- Expects filenames like `2026 0115.md`.
+- Returns `{ year, month, day }` or `null` if it does not match.
+
+To support different patterns, adjust the regex and capture groups.
+
+---
+
+### 2. Time parsing helpers
+
+```js
+function parseCompactTime(str) {
+  const s = str.trim();
+  if (!/^\d{3,4}$/.test(s)) return null;
+  let h, m;
+  if (s.length === 3) {
+    h = Number(s);
+    m = Number(s.slice(1));
+  } else {
+    h = Number(s.slice(0, 2));
+    m = Number(s.slice(2));
+  }
+  if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+    return null;
+  }
+  return { h, m };
+}
+
+function makeDateTime(dateObj, compact) {
+  const t = parseCompactTime(compact);
+  if (!t) return null;
+  return new Date(
+    dateObj.year,
+    dateObj.month - 1,
+    dateObj.day,
+    t.h,
+    t.m,
+    0,
+    0
+  );
+}
+```
+
+- Interprets `900` as 09:00, `0115` as 01:15, `1700` as 17:00 on the given date.
+- Returns a JavaScript `Date` instance in local time.
+
+---
+
+### 3. `parseMarkdownToEvents(fileName, contents)`
+
+Core parser for one `.md` file:
+
+```js
+function parseMarkdownToEvents(fileName, contents) {
+  const dateObj = dateFromFilename(fileName);
+  if (!dateObj) return [];
+
+  const events = [];
+  const lines = contents.split(/\r?\n/);
+
+  const re = /^-\s*\[[ xX]?\]\s*(\d{3,4})\s*-\s*(\d{3,4})\s+(.+)$/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const m = line.match(re);
+    if (!m) continue;
+
+    const [, startStr, endStr, summaryRaw] = m;
+    const start = makeDateTime(dateObj, startStr);
+    const end = makeDateTime(dateObj, endStr);
+    if (!start || !end) continue;
+
+    // Collect indented bullets / text that follow as description
+    const details = [];
+    let j = i + 1;
+    while (j < lines.length) {
+      const ln = lines[j];
+      const trimmed = ln.trim();
+
+      if (!trimmed) break; // blank line ends description block
+      if (/^-\s*\[[ xX]?]/.test(ln)) break; // next top-level task
+
+      if (/^\s+[-*]\s+/.test(ln)) {
+        // Indented bullet
+        details.push(trimmed.replace(/^[-*]\s+/, ''));
+      } else if (/^\s+/.test(ln)) {
+        // Any other indented text
+        details.push(trimmed);
+      } else {
+        // Non-indented, non-task line → stop
+        break;
+      }
+      j++;
+    }
+
+    let description = '';
+    if (details.length) {
+      description = details.join('\n');
+    }
+
+    events.push({
+      summary: summaryRaw.trim(),
+      location: '',
+      description,
+      start,
+      end,
+      fileName,
+    });
+  }
+  return events;
+}
+```
+
+Notes:
+
+- Includes **both** `[x]` and `[ ]` tasks; the checkbox state is ignored – if needed you can branch here.
+- Regex captures:
+  - Group 1: start time (3–4 digits).
+  - Group 2: end time.
+  - Group 3: rest of the line (summary).
+- The inner `while` loop collects indented bullets/text as description.
+
+Possible customisations:
+
+- Change the regex to require a specific emoji or tag in the task line.
+- Inspect the checkbox to, for example, prefix incomplete tasks with `TODO:` in the summary.
+- Extend the parser to read locations (`@ Location`) and store them in `location`.
+
+---
+
+### 4. Recursive directory walk
+
+```js
+async function collectMarkdownFilesFromDir(dirHandle, eventsOut, filesCountRef) {
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === 'file' && name.toLowerCase().endsWith('.md')) {
+      filesCountRef.count++;
+      const file = await handle.getFile();
+      const text = await file.text();
+      const events = parseMarkdownToEvents(name, text);
+      eventsOut.push(...events);
+    } else if (handle.kind === 'directory') {
+      await collectMarkdownFilesFromDir(handle, eventsOut, filesCountRef);
+    }
+  }
+}
+```
+
+- Recursively walks the folder tree starting at the root directory handle returned by `showDirectoryPicker()`. [web:23][web:36]
+- Accumulates:
+  - `eventsOut`: an array of all events found.
+  - `filesCountRef.count`: total number of `.md` files processed.
+
+If you want to limit scanning to a certain depth, you can add a `depth` parameter and stop when a limit is reached.
+
+---
+
+### 5. ICS generation – `buildICS(events)`
+
+```js
+function buildICS(events) {
+  const lines = [];
+  lines.push('BEGIN:VCALENDAR');
+  lines.push('VERSION:2.0');
+  lines.push('PRODID:-//obsidian-daily-notes-to-ics//EN');
+  lines.push('CALSCALE:GREGORIAN');
+  lines.push('METHOD:PUBLISH');
+
+  const now = new Date();
+  const dtStamp = toICSDateTime(now);
+
+  for (const ev of events) {
+    const uid =
+      'obsidian-' +
+      ev.start.getTime().toString(36) +
+      '-' +
+      Math.random().toString(36).slice(2);
+
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + uid);
+    lines.push('DTSTAMP:' + dtStamp);
+    lines.push('DTSTART:' + toICSDateTime(ev.start));
+    lines.push('DTEND:' + toICSDateTime(ev.end));
+    lines.push('SUMMARY:' + icsEscape(ev.summary));
+    if (ev.location) {
+      lines.push('LOCATION:' + icsEscape(ev.location));
+    }
+    if (ev.description) {
+      lines.push('DESCRIPTION:' + icsEscape(ev.description));
+    }
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+```
+
+- Uses “floating” local times (no explicit timezone).
+- Escapes characters that would break ICS syntax.
+
+To add all‑day events, you could branch on tasks without time and emit `DTSTART;VALUE=DATE:YYYYMMDD`.
+
+---
+
+## UI wiring
+
+- `pickFolderBtn` click → `showDirectoryPicker()` → sets `directoryHandle`.
+- `scanBtn` click → calls `collectMarkdownFilesFromDir(directoryHandle, parsedEvents, filesCountRef)` and populates the preview box.
+- `downloadBtn` click → calls `buildICS(parsedEvents)` and downloads via a `Blob` + synthetic `<a>` element.
+
+---
+
+## Adapting for other Obsidian setups
+
+Common modifications:
+
+- **Different daily note filenames**  
+  Change `dateFromFilename` to parse `YYYY-MM-DD`, `DD-MM-YYYY`, or any custom format (just adjust the regex).
+
+- **Frontmatter‑based events**  
+  Instead of parsing lines, detect YAML frontmatter (`--- ... ---`) and parse structured fields (`event_start`, `event_end`, `event_title`, etc.).
+
+- **Tag‑filtered events**  
+  Require a certain tag (e.g. `#calendar`) in the summary or description before turning a task into an event.
+
+- **Locations**  
+  Parse `@ Location` from the summary and store in `ev.location` so it becomes `LOCATION:` in the ICS.
+
+---
+
+## Browser compatibility
+
+- This project uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API), which at the moment is only available in Chromium‑based desktop browsers and only in secure contexts (`https://` or `http://localhost`).[web:23][web:45]
+- If you need support for Firefox/Safari, you would have to:
+  - Fall back to classic `<input type="file" webkitdirectory>` or multiple file pickers.
+  - Replace `showDirectoryPicker` + directory handles with a different approach.
+
+---
+
+## Contributing
+
+- Fork the repo.
+- Open issues for:
+  - New filename / template formats.
+  - Additional calendar features.
+  - Parser bugs or unexpected behaviour.
+- Pull requests welcome – especially for:
+  - Better configurability of formats via a small JSON config.
+  - Additional documentation and examples.
