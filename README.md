@@ -16,13 +16,13 @@ All parsing happens entirely in your browser. **No data ever leaves your device.
 
 ## How to Use
 
-1. Open the [live app](https://dilpreetsinghh.github.io/Markdown-to-Calendar/) *(requires GitHub Pages to be enabled)*
+1. Open the [live app](https://dilpreetsinghh.github.io/Markdown-to-Calendar/)
 2. Click **Select Folder** or drag & drop your daily notes folder
 3. Optionally choose a **Calendar tagging** mode (`#tags` or `@labels`)
 4. Click **Scan and Preview Events**
 5. Adjust tag settings if needed
 6. Choose output format and click **Download Calendar File**
-7. Import the `.ics` file into your calendar app
+7. Import the file into your calendar app
 
 ---
 
@@ -82,7 +82,7 @@ After scanning, a tag configuration table appears — you can rename each tag's 
 
 - Fully offline — no server, no network requests
 - Files are only read after you explicitly select them
-- Nothing is uploaded anywhere; everything stays in your browser
+- Nothing is uploaded to any coperation; everything stays in your browser
 
 ---
 
