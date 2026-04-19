@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Obsidian Daily Notes → iCalendar</title>
+  <title>Markdown to Calendar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -78,13 +78,12 @@
   </style>
 </head>
 <body>
-  <h1>Obsidian Daily Notes → iCalendar</h1>
+  <h1>Markdown to Calendar</h1>
 
   <p style="max-width: 40rem; font-size: 0.95rem;">
-    Pick your Obsidian daily-notes folder, scan recursively for time-block tasks (completed and
-    incomplete, including subfolders), then download a combined calendar file (.ics, .ical,
-    .icalendar or .ifb). Indented bullets under a task become the event description. Optionally,
-    use #tags or @labels on task lines to categorise events.
+    Convert Obsidian daily-note time blocks into calendar events — fully offline, right in your browser.
+    No data leaves your device. Supports subfolders, #tags, @labels, and all major calendar formats
+    (.ics, .ical, .icalendar, .ifb).
   </p>
 
   <!-- webkitdirectory input — works on Safari 11.1+, Firefox, Chrome, Edge -->
@@ -93,17 +92,17 @@
   <input type="file" id="folderInputFallback" multiple accept=".md" />
 
   <!-- Drag & drop zone — universally supported -->
-  <div id="dropZone" title="Or drag your daily-notes folder here">
+  <div id="dropZone" title="Or drag your Markdown files or folder here">
     <span class="drop-icon">📂</span>
-    <strong>Drag &amp; drop your daily-notes folder here</strong>
+    <strong>Drag &amp; Drop Files or Folder with Markdown(.md) files</strong>
     <small>or use the button below to browse</small>
   </div>
 
   <div class="controls">
-    <button id="pickFolderBtn">Pick Markdown(.md) Files' Folder</button>
+    <button id="pickFolderBtn">Pick Markdown(.md) File(s)/Folder</button>
     <button id="scanBtn" disabled>Scan and Preview Events</button>
 
-    <label for="tagModeSelect">Calendar tagging:
+    <label for="tagModeSelect">Tag(s) for Calendar(s):
       <select id="tagModeSelect">
         <option value="none">No explicit calendar tags</option>
         <option value="hash">Use #tags (e.g. #work, #personal)</option>
@@ -111,7 +110,7 @@
       </select>
     </label>
 
-    <label for="formatSelect">Format:
+    <label for="formatSelect">Calendar File Format:
       <select id="formatSelect">
         <option value="ics">.ics (default)</option>
         <option value="ical">.ical</option>
@@ -121,7 +120,7 @@
     </label>
   </div>
 
-  <div id="status">No folder selected yet.</div>
+  <div id="status">No file/folder parsed yet!</div>
   <div id="tagConfigContainer"></div>
 
   <div id="stripTagsWrapper">
@@ -132,10 +131,10 @@
   </div>
 
   <div id="downloadBtnWrapper">
-    <button id="downloadBtn" class="primary" disabled>3. Download</button>
+    <button id="downloadBtn" class="primary" disabled>Download Calendar File</button>
   </div>
 
-  <pre id="preview">(No events parsed yet.)</pre>
+  <pre id="preview">No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.</pre>
 
   <script>
     // ── Capability detection ──────────────────────────────────────────────────
@@ -176,7 +175,7 @@
       statusEl.textContent = '📁 ' + label + ' — ' + collectedFiles.length + ' .md file(s) ready. Click "Scan and Preview Events".';
       scanBtn.disabled      = false;
       downloadBtn.disabled  = true;
-      previewEl.textContent = '(No events parsed yet.)';
+      previewEl.textContent = 'No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.';
       parsedEvents          = [];
       tagConfigContainer.innerHTML    = '';
       tagConfigContainer.style.display = 'none';
@@ -371,7 +370,7 @@
       const a       = document.createElement('a');
       const now     = new Date();
       a.href        = url;
-      a.download    = 'obsidian-daily-notes-' +
+      a.download    = 'markdown-to-calendar-' +
         now.getFullYear() +
         String(now.getMonth() + 1).padStart(2, '0') +
         String(now.getDate()).padStart(2, '0') +
@@ -463,10 +462,10 @@
     function buildICS(events) {
       const stamp = toICSDateTime(new Date());
       const lines = ['BEGIN:VCALENDAR','VERSION:2.0',
-        'PRODID:-//obsidian-daily-notes-to-ics//EN',
+        'PRODID:-//markdown-to-calendar//EN',
         'CALSCALE:GREGORIAN','METHOD:PUBLISH'];
       for (const ev of events) {
-        const uid = 'obsidian-' + ev.start.getTime().toString(36) + '-' + Math.random().toString(36).slice(2);
+        const uid = 'md2cal-' + ev.start.getTime().toString(36) + '-' + Math.random().toString(36).slice(2);
         lines.push('BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp,
           'DTSTART:'+toICSDateTime(ev.start),'DTEND:'+toICSDateTime(ev.end),
           'SUMMARY:'+icsEscape(ev.summary));
@@ -542,7 +541,10 @@
 
     // ── Preview ───────────────────────────────────────────────────────────────
     function updatePreview() {
-      if (!parsedEvents.length) { previewEl.textContent = '(No events parsed yet.)'; return; }
+      if (!parsedEvents.length) {
+        previewEl.textContent = 'No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.';
+        return;
+      }
       if (needsRescanForTagMode && tagMode !== 'none') {
         previewEl.textContent = 'Tag mode changed — please re-scan.'; return;
       }
