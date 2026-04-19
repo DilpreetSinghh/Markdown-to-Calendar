@@ -87,12 +87,6 @@
     use #tags or @labels on task lines to categorise events.
   </p>
 
-  <!--
-    Method 1 (Chromium): showDirectoryPicker — triggered via JS
-    Method 2 (All browsers): <input webkitdirectory> — whole folder, one click
-    Method 3 (All browsers): drag & drop a folder onto the drop zone
-  -->
-
   <!-- webkitdirectory input — works on Safari 11.1+, Firefox, Chrome, Edge -->
   <input type="file" id="folderInputNative" webkitdirectory mozdirectory directory multiple accept=".md" />
   <!-- Plain multi-file fallback (last resort, older browsers) -->
@@ -106,8 +100,8 @@
   </div>
 
   <div class="controls">
-    <button id="pickFolderBtn">1. Pick daily-notes folder</button>
-    <button id="scanBtn" disabled>2. Scan &amp; preview events</button>
+    <button id="pickFolderBtn">Pick Markdown(.md) Files' Folder</button>
+    <button id="scanBtn" disabled>Scan and Preview Events</button>
 
     <label for="tagModeSelect">Calendar tagging:
       <select id="tagModeSelect">
@@ -147,12 +141,11 @@
     // ── Capability detection ──────────────────────────────────────────────────
     const supportsDirectoryPicker  = typeof window.showDirectoryPicker === 'function';
     const supportsWebkitDirectory  = 'webkitdirectory' in document.createElement('input');
-    // DataTransferItem.webkitGetAsEntry is supported in Chrome, Firefox, Safari 11.1+
     const supportsDnDEntries       = typeof DataTransferItem !== 'undefined' &&
                                      typeof DataTransferItem.prototype.webkitGetAsEntry === 'function';
 
     // ── State ─────────────────────────────────────────────────────────────────
-    let collectedFiles        = [];   // always an array of File objects
+    let collectedFiles        = [];
     let parsedEvents          = [];
     let tagMode               = 'none';
     let tagConfig             = {};
@@ -173,14 +166,14 @@
     const folderInputNative   = document.getElementById('folderInputNative');
     const folderInputFallback = document.getElementById('folderInputFallback');
 
-    // ── Helpers: reset state after new folder/files chosen ───────────────────
+    // ── Reset state after new folder/files chosen ───────────────────────────
     function onFilesReady(files, label) {
       collectedFiles = files.filter(f => f.name.toLowerCase().endsWith('.md'));
       if (!collectedFiles.length) {
         statusEl.textContent = 'No .md files found in the selection.';
         return;
       }
-      statusEl.textContent = '📁 ' + label + ' — ' + collectedFiles.length + ' .md file(s) ready. Click "Scan & preview events".';
+      statusEl.textContent = '📁 ' + label + ' — ' + collectedFiles.length + ' .md file(s) ready. Click "Scan and Preview Events".';
       scanBtn.disabled      = false;
       downloadBtn.disabled  = true;
       previewEl.textContent = '(No events parsed yet.)';
@@ -236,26 +229,19 @@
       const items = Array.from(e.dataTransfer.items || []);
 
       if (supportsDnDEntries && items.length) {
-        // Use webkitGetAsEntry to recursively walk dropped folders
         const entries = items.map(i => i.webkitGetAsEntry()).filter(Boolean);
-        for (const entry of entries) {
-          await walkEntry(entry, files);
-        }
+        for (const entry of entries) await walkEntry(entry, files);
       } else {
-        // Fallback: flat list from dataTransfer.files (no recursion, still works for flat folders)
         files.push(...Array.from(e.dataTransfer.files));
       }
 
-      const folderName = (e.dataTransfer.items && e.dataTransfer.items[0])
-        ? (e.dataTransfer.items[0].webkitGetAsEntry
-            ? (e.dataTransfer.items[0].webkitGetAsEntry() || {}).name || 'dropped folder'
-            : 'dropped folder')
+      const folderName = (items[0] && items[0].webkitGetAsEntry)
+        ? ((items[0].webkitGetAsEntry() || {}).name || 'dropped folder')
         : 'dropped folder';
 
       onFilesReady(files, folderName);
     });
 
-    // Recursive walk of a FileSystemEntry (used in drag & drop)
     async function walkEntry(entry, out) {
       if (!entry) return;
       if (entry.isFile) {
@@ -265,7 +251,6 @@
         }
       } else if (entry.isDirectory) {
         const reader = entry.createReader();
-        // readEntries may return results in batches — loop until empty
         let batch;
         do {
           batch = await new Promise((res, rej) => reader.readEntries(res, rej));
@@ -274,29 +259,23 @@
       }
     }
 
-    // Also allow clicking the drop zone to trigger pick
     dropZone.addEventListener('click', () => pickFolderBtn.click());
 
-    // ── Pick folder button — chooses best available method ───────────────────
+    // ── Pick folder button — selects best available method ───────────────────
     pickFolderBtn.addEventListener('click', async () => {
       if (supportsDirectoryPicker) {
-        // Best: native OS folder dialog (Chromium)
         await pickViaDirectoryPicker();
       } else if (supportsWebkitDirectory) {
-        // Good: folder picker via <input webkitdirectory> (Safari, Firefox)
         folderInputNative.value = '';
         folderInputNative.click();
       } else {
-        // Last resort: multi-file picker
         folderInputFallback.value = '';
         folderInputFallback.click();
       }
     });
 
-    // Last-resort fallback input listener
     folderInputFallback.addEventListener('change', () => {
-      const files = Array.from(folderInputFallback.files);
-      onFilesReady(files, 'selected files');
+      onFilesReady(Array.from(folderInputFallback.files), 'selected files');
     });
 
     // ── Tag mode change ───────────────────────────────────────────────────────
@@ -304,7 +283,7 @@
       const newMode = tagModeSelect.value || 'none';
       if (newMode !== tagMode && parsedEvents.length) {
         needsRescanForTagMode = true;
-        statusEl.textContent = 'Calendar tagging mode changed. Please click "Scan & preview events" again to refresh tags.';
+        statusEl.textContent = 'Calendar tagging mode changed. Please click "Scan and Preview Events" again to refresh tags.';
         downloadBtn.disabled = true;
         tagConfigContainer.innerHTML = '';
         tagConfigContainer.style.display = 'none';
@@ -414,8 +393,8 @@
     function parseCompactTime(str) {
       const s = str.trim();
       if (!/^\d{3,4}$/.test(s)) return null;
-      const h = s.length === 3 ? Number(s[0])       : Number(s.slice(0, 2));
-      const m = s.length === 3 ? Number(s.slice(1))  : Number(s.slice(2));
+      const h = s.length === 3 ? Number(s[0])      : Number(s.slice(0, 2));
+      const m = s.length === 3 ? Number(s.slice(1)) : Number(s.slice(2));
       if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
       return { h, m };
     }
@@ -532,7 +511,10 @@
       });
       tagConfigContainer.querySelectorAll('input[type="text"]').forEach(el => {
         el.addEventListener('input', () => {
-          if (tagConfig[el.dataset.tagName]) { tagConfig[el.dataset.tagName].name = el.value.trim() || el.dataset.tagName.replace(/^[#@]/,''); updatePreview(); }
+          if (tagConfig[el.dataset.tagName]) {
+            tagConfig[el.dataset.tagName].name = el.value.trim() || el.dataset.tagName.replace(/^[#@]/,'');
+            updatePreview();
+          }
         });
       });
     }
@@ -547,7 +529,10 @@
         let title  = ev.summary;
         if (stripTagsFromSummary) {
           for (const t of matching) {
-            title = title.replace(new RegExp('(?:\\s+|^)' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?=\\s|$)','g'), '').trim();
+            title = title.replace(
+              new RegExp('(?:\\s+|^)' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?=\\s|$)','g'),
+              ''
+            ).trim();
           }
         }
         acc.push({ ...ev, calendarKey: cfg?.name || matching[0].replace(/^[#@]/,''), summary: title });
