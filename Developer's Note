@@ -1,19 +1,21 @@
-# Developer Notes – Obsidian Daily Notes → iCalendar
+# Developer Notes – Markdown to Calendar
 
-This document describes how the single‑file web app works so you can modify or extend it.
+This document describes how the single-file web app works so you can modify or extend it.
 
 The entire app lives in:
 
 - `obsidian-daily-notes-to-ics.html`
+
+🌐 **Live at:** [dilpreetsinghh.github.io/Markdown-to-Calendar](https://dilpreetsinghh.github.io/Markdown-to-Calendar/)
 
 It contains:
 
 - HTML for controls and layout.
 - Embedded CSS for basic styling.
 - Vanilla JavaScript for:
-  - Folder selection via the File System Access API.
+  - Folder selection via three methods: File System Access API, `webkitdirectory` input, and Drag & Drop.
   - Recursive scanning of `.md` files.
-  - Parsing of time‑blocked tasks and their descriptions.
+  - Parsing of time-blocked tasks and their descriptions.
   - Optional calendar tagging based on `#tags` or `@labels`.
   - iCalendar (`text/calendar`) generation and file download.
 
@@ -25,8 +27,8 @@ There are no external dependencies.
 
 Key global variables:
 
-- `directoryHandle`: the folder chosen via `showDirectoryPicker()`.
-- `parsedEvents: Event[]`: all raw events parsed from markdown.
+- `collectedFiles: File[]`: all `.md` files collected from the selected folder.
+- `parsedEvents: ParsedEvent[]`: all raw events parsed from markdown.
 - `tagMode: 'none' | 'hash' | 'at'`: how we interpret tags on a line.
 - `tagConfig: Record<string, { enabled: boolean; name: string }>`: configuration for each discovered tag.
 - `stripTagsFromSummary: boolean`: whether to remove calendar tags from event titles.
@@ -61,42 +63,38 @@ interface ExportEvent extends ParsedEvent {
 
 ### 1. File selection
 
-The user clicks **“Pick daily‑notes folder”**, which calls:
+The app supports three methods for selecting files, in order of preference:
 
+**Method 1 — File System Access API** (Chromium-based browsers):
 ```js
-const handle = await window.showDirectoryPicker({ id: 'obsidian-daily-notes' });
+const dirHandle = await window.showDirectoryPicker({ id: 'obsidian-daily-notes' });
 ```
 
-`directoryHandle` is stored for subsequent scans.
+**Method 2 — `webkitdirectory` input** (Safari, Firefox, Chrome, Edge):
+```html
+<input type="file" id="folderInputNative" webkitdirectory mozdirectory directory multiple accept=".md" />
+```
+
+**Method 3 — Drag & Drop** (all browsers including Safari 11.1+):
+The user drags a folder or files onto the drop zone. The app uses `webkitGetAsEntry()` to walk the directory tree.
+
+All three methods funnel into `onFilesReady(files, label)` which populates `collectedFiles`.
+
+The **Select Folder** button automatically picks the best available method based on browser capability.
 
 ### 2. Recursive scan
 
-When the user clicks **“Scan & preview events”**, the app walks the directory tree:
+When the user clicks **"Scan and Preview Events"**, the app iterates over `collectedFiles`:
 
 ```js
-async function collectMarkdownFilesFromDir(dirHandle, eventsOut, filesCountRef, discoveredTags) {
-  for await (const [name, handle] of dirHandle.entries()) {
-    if (handle.kind === 'file' && name.toLowerCase().endsWith('.md')) {
-      filesCountRef.count++;
-      const file = await handle.getFile();
-      const text = await file.text();
-      const events = parseMarkdownToEvents(name, text);
-      for (const ev of events) {
-        if (ev.tags && ev.tags.length) {
-          for (const t of ev.tags) {
-            discoveredTags.add(t);
-          }
-        }
-      }
-      eventsOut.push(...events);
-    } else if (handle.kind === 'directory') {
-      await collectMarkdownFilesFromDir(handle, eventsOut, filesCountRef, discoveredTags);
-    }
-  }
+for (const file of collectedFiles) {
+  const text = await file.text();
+  const events = parseMarkdownToEvents(file.name, text);
+  for (const ev of events) for (const t of (ev.tags || [])) discoveredTags.add(t);
+  parsedEvents.push(...events);
 }
 ```
 
-- `filesCountRef.count` tracks how many markdown files were scanned.
 - `discoveredTags` accumulates every distinct tag encountered on any event line.
 - `parsedEvents` is populated with all events across all files.
 
@@ -109,8 +107,7 @@ function dateFromFilename(name) {
   const base = name.replace(/\.md$/i, '');
   const m = base.match(/(\d{4})\s(\d{2})(\d{2})/);
   if (!m) return null;
-  const [_, y, mo, d] = m;
-  return { year: Number(y), month: Number(mo), day: Number(d) };
+  return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
 }
 ```
 
@@ -120,32 +117,16 @@ This is then combined with a compact time such as `0115` or `1700`:
 function parseCompactTime(str) {
   const s = str.trim();
   if (!/^\d{3,4}$/.test(s)) return null;
-  let h, m;
-  if (s.length === 3) {
-    h = Number(s[0]);
-    m = Number(s.slice(1));
-  } else {
-    h = Number(s.slice(0, 2));
-    m = Number(s.slice(2));
-  }
-  if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
-    return null;
-  }
+  const h = s.length === 3 ? Number(s[0])      : Number(s.slice(0, 2));
+  const m = s.length === 3 ? Number(s.slice(1)) : Number(s.slice(2));
+  if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
   return { h, m };
 }
 
 function makeDateTime(dateObj, compact) {
   const t = parseCompactTime(compact);
   if (!t) return null;
-  return new Date(
-    dateObj.year,
-    dateObj.month - 1,
-    dateObj.day,
-    t.h,
-    t.m,
-    0,
-    0
-  );
+  return new Date(dateObj.year, dateObj.month - 1, dateObj.day, t.h, t.m, 0, 0);
 }
 ```
 
@@ -160,22 +141,22 @@ const re = /^-\s*\[[ xX]?\]\s*(\d{3,4})\s*-\s*(\d{3,4})\s+(.+)$/;
 For example:
 
 ```markdown
-- [x] 0115- 0140 Morning study block ✅ 2025-02-08
-- [ ] 1000- 1700 Rest / Sleep
+- [x] 0115-0140 Morning study block ✅ 2025-02-08
+- [ ] 1000-1700 Rest / Sleep
 ```
 
 From each match we extract:
 
 - Start and end compact times → `Date` objects using `makeDateTime`.
-- The remaining text as `summaryRaw`.
-- Tags/labels via `extractLineTags(summaryRaw)`.
-- Indented lines that immediately follow as the multi‑line description.
+- The remaining text as the event summary.
+- Tags/labels via `extractLineTags(summary)`.
+- Indented lines that immediately follow as the multi-line description.
 
 The parser stops attaching description lines when it hits:
 
 - A blank line.
-- Another top‑level task (`- [ ]` or `- [x]`).
-- A non‑indented, non‑task line.
+- Another top-level task (`- [ ]` or `- [x]`).
+- A non-indented, non-task line.
 
 ---
 
@@ -195,22 +176,12 @@ The mode is driven by the **Calendar tagging** `<select>`.
 
 ```js
 function extractLineTags(text) {
-  if (!text) return [];
-  const tags = new Set();
-  if (tagMode === 'hash') {
-    const re = /#[^\s#@]+/g;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      tags.add(m[0]);
-    }
-  } else if (tagMode === 'at') {
-    const re = /@[^\s#@]+/g;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      tags.add(m[0]);
-    }
-  }
-  return Array.from(tags);
+  if (!text || tagMode === 'none') return [];
+  const re = tagMode === 'hash' ? /#[^\s#@]+/g : /@[^\s#@]+/g;
+  const out = new Set();
+  let m;
+  while ((m = re.exec(text)) !== null) out.add(m[0]);
+  return Array.from(out);
 }
 ```
 
@@ -222,66 +193,44 @@ After scanning, the app builds a configuration table if `tagMode !== 'none'` and
 
 - Each row shows:
   - A **Use** checkbox.
-  - The raw tag (for example `#cal/selfstudy`).
-  - An editable **Calendar name** field (for example `Self Study`).
+  - The raw tag (e.g. `#cal/selfstudy`).
+  - An editable **Calendar name** field (e.g. `Self Study`).
 - Default calendar names are derived from the raw tag by stripping `#` or `@` and converting separators (`/`, `_`, `-`) into spaces with capitalisation.
 
 Events are later filtered and annotated according to this `tagConfig`.
 
 ### Stripping tags from titles
 
-When `stripTagsFromSummary` is `true`, the app removes any matching calendar tags from the event summary text before export:
+When `stripTagsFromSummary` is `true`, the app removes any matching calendar tags from the event summary before export:
 
 ```js
-let summaryTitle = ev.summary;
-if (stripTagsFromSummary) {
-  for (const t of matching) {
-    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp('(?:\\s+|^)' + escaped + '(?=\\s|$)', 'g');
-    summaryTitle = summaryTitle.replace(re, '').trim();
-  }
+for (const t of matching) {
+  title = title.replace(
+    new RegExp('(?:\\s+|^)' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=\\s|$)', 'g'),
+    ''
+  ).trim();
 }
 ```
 
-This affects both the preview and the final ICS `SUMMARY:` value for each event.
+This affects both the preview and the final ICS `SUMMARY:` value.
 
 ### Rescan requirement
 
 If the user changes `tagMode` after scanning, the app:
 
 - Sets `needsRescanForTagMode = true`.
-- Updates the status with a message asking the user to scan again.
+- Updates the status asking the user to scan again.
 - Clears the tag configuration UI and disables download.
-
-`updatePreview()` shows an explanation while a rescan is required, and the download handler refuses to export until the user has rescanned with the new tagging mode.
 
 ---
 
 ## Tagging summary
 
-During scanning, the app computes per‑tag statistics:
-
-```js
-const tagStats = {};
-for (const ev of parsedEvents) {
-  const tags = ev.tags || [];
-  for (const t of tags) {
-    if (!tagStats[t]) {
-      tagStats[t] = { events: 0, files: new Set() };
-    }
-    tagStats[t].events += 1;
-    tagStats[t].files.add(ev.fileName);
-  }
-}
-```
-
-These are rendered into a single line below the raw event count, for example:
+During scanning, the app computes per-tag statistics and renders them below the event count:
 
 ```text
-Tagging summary: #cal/work – 30 events in 5 files; #cal/personal – 25 events in 6 files
+Tagging: #cal/work – 30 events; #cal/personal – 25 events
 ```
-
-This helps users understand how tags are distributed across events and files before they configure calendars.
 
 ---
 
@@ -289,45 +238,24 @@ This helps users understand how tags are distributed across events and files bef
 
 ### Building iCalendar content
 
-The function `buildICS(events: ExportEvent[])` generates the calendar text:
+The function `buildICS(events)` generates the calendar text per RFC 5545:
 
 ```js
 function buildICS(events) {
-  const lines = [];
-  lines.push('BEGIN:VCALENDAR');
-  lines.push('VERSION:2.0');
-  lines.push('PRODID:-//obsidian-daily-notes-to-ics//EN');
-  lines.push('CALSCALE:GREGORIAN');
-  lines.push('METHOD:PUBLISH');
-
-  const now = new Date();
-  const dtStamp = toICSDateTime(now);
-
+  const stamp = toICSDateTime(new Date());
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0',
+    'PRODID:-//markdown-to-calendar//EN',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
   for (const ev of events) {
-    const uid =
-      'obsidian-' +
-      ev.start.getTime().toString(36) +
-      '-' +
-      Math.random().toString(36).slice(2);
-
-    lines.push('BEGIN:VEVENT');
-    lines.push('UID:' + uid);
-    lines.push('DTSTAMP:' + dtStamp);
-    lines.push('DTSTART:' + toICSDateTime(ev.start));
-    lines.push('DTEND:' + toICSDateTime(ev.end));
-    lines.push('SUMMARY:' + icsEscape(ev.summary));
-    if (ev.location) {
-      lines.push('LOCATION:' + icsEscape(ev.location));
-    }
-    if (ev.description) {
-      lines.push('DESCRIPTION:' + icsEscape(ev.description));
-    }
-    if (ev.calendarKey) {
-      lines.push('CATEGORIES:' + icsEscape(ev.calendarKey));
-    }
+    const uid = 'md2cal-' + ev.start.getTime().toString(36) + '-' + Math.random().toString(36).slice(2);
+    lines.push('BEGIN:VEVENT', 'UID:' + uid, 'DTSTAMP:' + stamp,
+      'DTSTART:' + toICSDateTime(ev.start), 'DTEND:' + toICSDateTime(ev.end),
+      'SUMMARY:' + icsEscape(ev.summary));
+    if (ev.location)    lines.push('LOCATION:'    + icsEscape(ev.location));
+    if (ev.description) lines.push('DESCRIPTION:' + icsEscape(ev.description));
+    if (ev.calendarKey) lines.push('CATEGORIES:'  + icsEscape(ev.calendarKey));
     lines.push('END:VEVENT');
   }
-
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
 }
@@ -342,23 +270,15 @@ The download click handler:
 1. Ensures a rescan is not required when in tag mode.
 2. Filters events using `getFilteredEventsForCurrentConfig()`.
 3. Builds the ICS text.
-4. Picks an extension from the **Format** dropdown:
-
-   - `.ics`
-   - `.ical`
-   - `.icalendar`
-   - `.ifb`
-
+4. Picks an extension from the **Format** dropdown: `.ics`, `.ical`, `.icalendar`, `.ifb`.
 5. Creates a `Blob` with `type: 'text/calendar;charset=utf-8'`.
 6. Uses `URL.createObjectURL` and a temporary `<a>` element to trigger the download.
 
 The generated filename is of the form:
 
-```text
-obsidian-daily-notes-YYYYMMDD.ext
 ```
-
-where `ext` matches the selected format.
+markdown-to-calendar-YYYYMMDD.ext
+```
 
 ---
 
@@ -366,9 +286,15 @@ where `ext` matches the selected format.
 
 Ideas for future extensions:
 
-- Support additional filename patterns (for example ISO `YYYY-MM-DD`).
-- Support YAML frontmatter‑driven events.
+- Support additional filename patterns (e.g. ISO `YYYY-MM-DD`).
+- Support YAML frontmatter-driven events.
 - Allow exporting one ICS file per calendar/category instead of a single combined file.
 - Add basic unit tests around the parsing and tagging logic by extracting the JavaScript into a separate file.
 
 Because everything is in a single HTML file with no build step, small tweaks are straightforward: open the file in a text editor, adjust the JavaScript, and refresh the browser.
+
+---
+
+## Licence
+
+[GNU Affero General Public License v3.0](./LICENSE)
