@@ -4,124 +4,77 @@
   <meta charset="utf-8" />
   <title>Obsidian Daily Notes → iCalendar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      padding: 1.5rem;
-      background: #f7f6f2;
-      color: #222;
+      margin: 0; padding: 1.5rem;
+      background: #f7f6f2; color: #222;
     }
-    h1 {
-      font-size: 1.6rem;
-      margin-bottom: 0.75rem;
-    }
+    h1 { font-size: 1.6rem; margin-bottom: 0.75rem; }
     .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      align-items: center;
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      margin-bottom: 1rem; align-items: center;
     }
     button {
-      padding: 0.5rem 0.9rem;
-      font-size: 0.95rem;
-      border-radius: 0.4rem;
-      border: 1px solid #ccc;
-      background: white;
-      cursor: pointer;
+      padding: 0.5rem 0.9rem; font-size: 0.95rem;
+      border-radius: 0.4rem; border: 1px solid #ccc;
+      background: white; cursor: pointer;
     }
-    button.primary {
-      background: #01696f;
-      border-color: #01696f;
-      color: white;
-    }
-    button:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-    label {
-      font-size: 0.9rem;
-    }
+    button.primary { background: #01696f; border-color: #01696f; color: white; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    label { font-size: 0.9rem; }
     select {
-      padding: 0.3rem 0.5rem;
-      font-size: 0.9rem;
-      border-radius: 0.3rem;
-      border: 1px solid #ccc;
-      background: #fff;
+      padding: 0.3rem 0.5rem; font-size: 0.9rem;
+      border-radius: 0.3rem; border: 1px solid #ccc; background: #fff;
     }
-    #status {
-      margin: 0.5rem 0 0.75rem;
-      font-size: 0.9rem;
-      color: #555;
-    }
+    #status { margin: 0.5rem 0 0.75rem; font-size: 0.9rem; color: #555; }
     #preview {
-      white-space: pre-wrap;
-      border-radius: 0.4rem;
-      border: 1px solid #ddd;
-      background: #fbfbf9;
-      padding: 0.75rem;
-      max-height: 18rem;
-      overflow: auto;
-      font-size: 0.85rem;
+      white-space: pre-wrap; border-radius: 0.4rem;
+      border: 1px solid #ddd; background: #fbfbf9;
+      padding: 0.75rem; max-height: 18rem; overflow: auto; font-size: 0.85rem;
     }
     #tagConfigContainer {
-      margin: 0.75rem 0 0.75rem;
-      padding: 0.75rem;
-      border-radius: 0.4rem;
-      border: 1px solid #ddd;
-      background: #f0f0eb;
-      font-size: 0.85rem;
-      display: none;
+      margin: 0.75rem 0; padding: 0.75rem;
+      border-radius: 0.4rem; border: 1px solid #ddd;
+      background: #f0f0eb; font-size: 0.85rem; display: none;
     }
-    #tagConfigContainer table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
+    #tagConfigContainer table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    #tagConfigContainer th, #tagConfigContainer td {
+      border-bottom: 1px solid #ddd; padding: 0.2rem 0.3rem;
+      text-align: left; font-size: 0.85rem;
     }
-    #tagConfigContainer th,
-    #tagConfigContainer td {
-      border-bottom: 1px solid #ddd;
-      padding: 0.2rem 0.3rem;
-      text-align: left;
-      font-size: 0.85rem;
-    }
-    #tagConfigContainer code {
-      background: #e6e3db;
-      padding: 0.05rem 0.2rem;
-      border-radius: 0.2rem;
-    }
+    #tagConfigContainer code { background: #e6e3db; padding: 0.05rem 0.2rem; border-radius: 0.2rem; }
     #tagConfigContainer input[type="text"] {
-      width: 100%;
-      padding: 0.2rem 0.3rem;
-      font-size: 0.85rem;
-      border-radius: 0.25rem;
-      border: 1px solid #ccc;
+      width: 100%; padding: 0.2rem 0.3rem; font-size: 0.85rem;
+      border-radius: 0.25rem; border: 1px solid #ccc;
     }
-    #stripTagsWrapper {
-      margin: 0 0 0.5rem;
-      font-size: 0.85rem;
+    #stripTagsWrapper { margin: 0 0 0.5rem; font-size: 0.85rem; }
+    #downloadBtnWrapper { margin: 0.5rem 0 0.75rem; }
+
+    /* ── Drag-and-drop zone ── */
+    #dropZone {
+      border: 2px dashed #b0b0a0;
+      border-radius: 0.6rem;
+      padding: 1.2rem 1rem;
+      text-align: center;
+      color: #777;
+      font-size: 0.92rem;
+      margin-bottom: 1rem;
+      transition: background 0.15s, border-color 0.15s;
+      cursor: pointer;
+      user-select: none;
     }
-    #downloadBtnWrapper {
-      margin: 0.5rem 0 0.75rem;
+    #dropZone.dragover {
+      background: #e8f4f4;
+      border-color: #01696f;
+      color: #01696f;
     }
-    /* Fallback file input banner */
-    #fallbackBanner {
-      display: none;
-      background: #fff8e1;
-      border: 1px solid #ffe082;
-      border-radius: 0.4rem;
-      padding: 0.6rem 0.9rem;
-      margin-bottom: 0.75rem;
-      font-size: 0.88rem;
-      color: #5a4500;
-    }
-    #fallbackBanner strong { color: #3d2e00; }
-    /* Hidden real file input */
-    #folderFileInput {
-      display: none;
-    }
+    #dropZone .drop-icon { font-size: 2rem; display: block; margin-bottom: 0.3rem; }
+    #dropZone small { display: block; margin-top: 0.25rem; color: #aaa; font-size: 0.8rem; }
+
+    /* Hidden inputs */
+    #folderInputNative { display: none; }
+    #folderInputFallback { display: none; }
   </style>
 </head>
 <body>
@@ -134,16 +87,23 @@
     use #tags or @labels on task lines to categorise events.
   </p>
 
-  <!-- Shown only on non-Chromium browsers -->
-  <div id="fallbackBanner">
-    <strong>⚠️ Limited browser support detected (Safari / Brave / Firefox).</strong><br>
-    Your browser does not support the Folder Picker API. Falling back to a
-    <strong>file upload</strong> mode — select all your <code>.md</code> files manually
-    (you can select multiple files at once). Subfolder structure is preserved via file names.
-  </div>
+  <!--
+    Method 1 (Chromium): showDirectoryPicker — triggered via JS
+    Method 2 (All browsers): <input webkitdirectory> — whole folder, one click
+    Method 3 (All browsers): drag & drop a folder onto the drop zone
+  -->
 
-  <!-- Hidden fallback input used on Safari/Brave/Firefox -->
-  <input type="file" id="folderFileInput" multiple accept=".md" />
+  <!-- webkitdirectory input — works on Safari 11.1+, Firefox, Chrome, Edge -->
+  <input type="file" id="folderInputNative" webkitdirectory mozdirectory directory multiple accept=".md" />
+  <!-- Plain multi-file fallback (last resort, older browsers) -->
+  <input type="file" id="folderInputFallback" multiple accept=".md" />
+
+  <!-- Drag & drop zone — universally supported -->
+  <div id="dropZone" title="Or drag your daily-notes folder here">
+    <span class="drop-icon">📂</span>
+    <strong>Drag &amp; drop your daily-notes folder here</strong>
+    <small>or use the button below to browse</small>
+  </div>
 
   <div class="controls">
     <button id="pickFolderBtn">1. Pick daily-notes folder</button>
@@ -168,7 +128,6 @@
   </div>
 
   <div id="status">No folder selected yet.</div>
-
   <div id="tagConfigContainer"></div>
 
   <div id="stripTagsWrapper">
@@ -185,36 +144,162 @@
   <pre id="preview">(No events parsed yet.)</pre>
 
   <script>
-    // ── Browser capability detection ──────────────────────────────────────────
-    const supportsDirectoryPicker = typeof window.showDirectoryPicker === 'function';
-
-    if (!supportsDirectoryPicker) {
-      document.getElementById('fallbackBanner').style.display = 'block';
-      // Change button label to reflect file-select fallback
-      document.getElementById('pickFolderBtn').textContent = '1. Select .md files';
-    }
+    // ── Capability detection ──────────────────────────────────────────────────
+    const supportsDirectoryPicker  = typeof window.showDirectoryPicker === 'function';
+    const supportsWebkitDirectory  = 'webkitdirectory' in document.createElement('input');
+    // DataTransferItem.webkitGetAsEntry is supported in Chrome, Firefox, Safari 11.1+
+    const supportsDnDEntries       = typeof DataTransferItem !== 'undefined' &&
+                                     typeof DataTransferItem.prototype.webkitGetAsEntry === 'function';
 
     // ── State ─────────────────────────────────────────────────────────────────
-    let directoryHandle = null;       // used in Chromium path
-    let fallbackFiles   = [];         // used in fallback path: array of File objects
-    let parsedEvents    = [];
-    let tagMode         = 'none';     // 'none' | 'hash' | 'at'
-    let tagConfig       = {};         // rawTag -> { enabled: bool, name: string }
-    let stripTagsFromSummary = true;
+    let collectedFiles        = [];   // always an array of File objects
+    let parsedEvents          = [];
+    let tagMode               = 'none';
+    let tagConfig             = {};
+    let stripTagsFromSummary  = true;
     let needsRescanForTagMode = false;
 
-    const pickFolderBtn      = document.getElementById('pickFolderBtn');
-    const scanBtn            = document.getElementById('scanBtn');
-    const downloadBtn        = document.getElementById('downloadBtn');
-    const statusEl           = document.getElementById('status');
-    const previewEl          = document.getElementById('preview');
-    const formatSelect       = document.getElementById('formatSelect');
-    const tagModeSelect      = document.getElementById('tagModeSelect');
-    const tagConfigContainer = document.getElementById('tagConfigContainer');
-    const stripTagsCheckbox  = document.getElementById('stripTagsCheckbox');
-    const folderFileInput    = document.getElementById('folderFileInput');
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const pickFolderBtn       = document.getElementById('pickFolderBtn');
+    const scanBtn             = document.getElementById('scanBtn');
+    const downloadBtn         = document.getElementById('downloadBtn');
+    const statusEl            = document.getElementById('status');
+    const previewEl           = document.getElementById('preview');
+    const formatSelect        = document.getElementById('formatSelect');
+    const tagModeSelect       = document.getElementById('tagModeSelect');
+    const tagConfigContainer  = document.getElementById('tagConfigContainer');
+    const stripTagsCheckbox   = document.getElementById('stripTagsCheckbox');
+    const dropZone            = document.getElementById('dropZone');
+    const folderInputNative   = document.getElementById('folderInputNative');
+    const folderInputFallback = document.getElementById('folderInputFallback');
 
-    // ── Event listeners ───────────────────────────────────────────────────────
+    // ── Helpers: reset state after new folder/files chosen ───────────────────
+    function onFilesReady(files, label) {
+      collectedFiles = files.filter(f => f.name.toLowerCase().endsWith('.md'));
+      if (!collectedFiles.length) {
+        statusEl.textContent = 'No .md files found in the selection.';
+        return;
+      }
+      statusEl.textContent = '📁 ' + label + ' — ' + collectedFiles.length + ' .md file(s) ready. Click "Scan & preview events".';
+      scanBtn.disabled      = false;
+      downloadBtn.disabled  = true;
+      previewEl.textContent = '(No events parsed yet.)';
+      parsedEvents          = [];
+      tagConfigContainer.innerHTML    = '';
+      tagConfigContainer.style.display = 'none';
+      needsRescanForTagMode = false;
+    }
+
+    // ── METHOD 1: Chromium — showDirectoryPicker ──────────────────────────────
+    async function pickViaDirectoryPicker() {
+      try {
+        const dirHandle = await window.showDirectoryPicker({ id: 'obsidian-daily-notes' });
+        const files = [];
+        await walkDirectoryHandle(dirHandle, files);
+        onFilesReady(files, dirHandle.name || 'folder');
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          statusEl.textContent = 'Folder selection failed: ' + err.message;
+        }
+      }
+    }
+
+    async function walkDirectoryHandle(dirHandle, out) {
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'file' && name.toLowerCase().endsWith('.md')) {
+          out.push(await handle.getFile());
+        } else if (handle.kind === 'directory') {
+          await walkDirectoryHandle(handle, out);
+        }
+      }
+    }
+
+    // ── METHOD 2: webkitdirectory <input> — Safari, Firefox, Chrome ──────────
+    folderInputNative.addEventListener('change', () => {
+      const files = Array.from(folderInputNative.files);
+      const name  = files[0] ? (files[0].webkitRelativePath.split('/')[0] || 'folder') : 'folder';
+      onFilesReady(files, name);
+    });
+
+    // ── METHOD 3: Drag & Drop (all browsers, including Safari 11.1+) ─────────
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', async e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      statusEl.textContent = 'Reading dropped files…';
+
+      const files = [];
+      const items = Array.from(e.dataTransfer.items || []);
+
+      if (supportsDnDEntries && items.length) {
+        // Use webkitGetAsEntry to recursively walk dropped folders
+        const entries = items.map(i => i.webkitGetAsEntry()).filter(Boolean);
+        for (const entry of entries) {
+          await walkEntry(entry, files);
+        }
+      } else {
+        // Fallback: flat list from dataTransfer.files (no recursion, still works for flat folders)
+        files.push(...Array.from(e.dataTransfer.files));
+      }
+
+      const folderName = (e.dataTransfer.items && e.dataTransfer.items[0])
+        ? (e.dataTransfer.items[0].webkitGetAsEntry
+            ? (e.dataTransfer.items[0].webkitGetAsEntry() || {}).name || 'dropped folder'
+            : 'dropped folder')
+        : 'dropped folder';
+
+      onFilesReady(files, folderName);
+    });
+
+    // Recursive walk of a FileSystemEntry (used in drag & drop)
+    async function walkEntry(entry, out) {
+      if (!entry) return;
+      if (entry.isFile) {
+        if (entry.name.toLowerCase().endsWith('.md')) {
+          const file = await new Promise((res, rej) => entry.file(res, rej));
+          out.push(file);
+        }
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        // readEntries may return results in batches — loop until empty
+        let batch;
+        do {
+          batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+          for (const child of batch) await walkEntry(child, out);
+        } while (batch.length > 0);
+      }
+    }
+
+    // Also allow clicking the drop zone to trigger pick
+    dropZone.addEventListener('click', () => pickFolderBtn.click());
+
+    // ── Pick folder button — chooses best available method ───────────────────
+    pickFolderBtn.addEventListener('click', async () => {
+      if (supportsDirectoryPicker) {
+        // Best: native OS folder dialog (Chromium)
+        await pickViaDirectoryPicker();
+      } else if (supportsWebkitDirectory) {
+        // Good: folder picker via <input webkitdirectory> (Safari, Firefox)
+        folderInputNative.value = '';
+        folderInputNative.click();
+      } else {
+        // Last resort: multi-file picker
+        folderInputFallback.value = '';
+        folderInputFallback.click();
+      }
+    });
+
+    // Last-resort fallback input listener
+    folderInputFallback.addEventListener('change', () => {
+      const files = Array.from(folderInputFallback.files);
+      onFilesReady(files, 'selected files');
+    });
+
+    // ── Tag mode change ───────────────────────────────────────────────────────
     tagModeSelect.addEventListener('change', () => {
       const newMode = tagModeSelect.value || 'none';
       if (newMode !== tagMode && parsedEvents.length) {
@@ -233,102 +318,46 @@
       updatePreview();
     });
 
-    // Fallback: when files are chosen via <input type="file">
-    folderFileInput.addEventListener('change', () => {
-      const files = Array.from(folderFileInput.files).filter(f => f.name.toLowerCase().endsWith('.md'));
-      if (!files.length) {
-        statusEl.textContent = 'No .md files selected.';
-        return;
-      }
-      fallbackFiles = files;
-      directoryHandle = null;
-      statusEl.textContent = files.length + ' .md file(s) selected.';
-      scanBtn.disabled = false;
-      downloadBtn.disabled = true;
-      previewEl.textContent = '(No events parsed yet.)';
-      parsedEvents = [];
-      tagConfigContainer.innerHTML = '';
-      tagConfigContainer.style.display = 'none';
-      needsRescanForTagMode = false;
-    });
-
-    // ── Pick folder / files button ────────────────────────────────────────────
-    pickFolderBtn.addEventListener('click', async () => {
-      if (supportsDirectoryPicker) {
-        // Chromium path
-        try {
-          directoryHandle = await window.showDirectoryPicker({ id: 'obsidian-daily-notes' });
-          fallbackFiles = [];
-          statusEl.textContent = 'Folder selected: ' + (directoryHandle.name || '(unnamed)');
-          scanBtn.disabled = false;
-          downloadBtn.disabled = true;
-          previewEl.textContent = '(No events parsed yet.)';
-          parsedEvents = [];
-          tagConfigContainer.innerHTML = '';
-          tagConfigContainer.style.display = 'none';
-          needsRescanForTagMode = false;
-        } catch (err) {
-          console.error('showDirectoryPicker error:', err.name, err.message);
-          statusEl.textContent = 'Folder selection cancelled or failed: ' + (err.name || 'Unknown error');
-        }
-      } else {
-        // Safari / Brave / Firefox fallback — trigger hidden <input>
-        folderFileInput.click();
-      }
-    });
-
     // ── Scan button ───────────────────────────────────────────────────────────
     scanBtn.addEventListener('click', async () => {
-      statusEl.textContent = 'Scanning markdown files…';
+      if (!collectedFiles.length) { statusEl.textContent = 'No files to scan.'; return; }
+      statusEl.textContent = 'Scanning ' + collectedFiles.length + ' markdown file(s)…';
       parsedEvents = [];
-      const filesCountRef  = { count: 0 };
-      const discoveredTags = new Set();
       needsRescanForTagMode = false;
+      const discoveredTags = new Set();
 
       try {
-        if (supportsDirectoryPicker && directoryHandle) {
-          // Chromium: walk directory recursively
-          await collectMarkdownFilesFromDir(directoryHandle, parsedEvents, filesCountRef, discoveredTags);
-        } else if (fallbackFiles.length) {
-          // Fallback: process the File objects directly
-          await collectMarkdownFromFileList(fallbackFiles, parsedEvents, filesCountRef, discoveredTags);
-        } else {
-          statusEl.textContent = 'No folder or files selected.';
-          return;
+        for (const file of collectedFiles) {
+          const text   = await file.text();
+          const events = parseMarkdownToEvents(file.name, text);
+          for (const ev of events) for (const t of (ev.tags || [])) discoveredTags.add(t);
+          parsedEvents.push(...events);
         }
 
         if (!parsedEvents.length) {
           statusEl.textContent =
-            'Scanned ' + filesCountRef.count +
-            ' markdown file(s), but no matching time-block lines were found.';
+            'Scanned ' + collectedFiles.length + ' file(s) — no matching time-block lines found.';
           previewEl.textContent =
-            'No events found.\n\nExpected lines like:\n- [x] 0115- 0140 Analysis of Course on PW ✅ 2025-02-08\n    - SBI CLERK CRASH COURSE (PRE+MAINS) 2024-25\n    - Course Duration: 10 Jan 2025 to 28 Feb 2025\n    - Validity: 31 Dec 2025';
+            'No events found.\n\nExpected lines like:\n- [x] 0115- 0140 Analysis of Course on PW ✅ 2025-02-08\n    - SBI CLERK CRASH COURSE (PRE+MAINS) 2024-25';
           downloadBtn.disabled = true;
           tagConfigContainer.innerHTML = '';
           tagConfigContainer.style.display = 'none';
           return;
         }
 
-        const baseLine =
-          'Found ' + parsedEvents.length + ' raw events in ' +
-          filesCountRef.count + ' file(s).';
-
+        let baseLine = 'Found ' + parsedEvents.length + ' raw events in ' + collectedFiles.length + ' file(s).';
         let taggingLine = '';
         if (tagMode !== 'none' && discoveredTags.size) {
           const tagStats = {};
           for (const ev of parsedEvents) {
             for (const t of (ev.tags || [])) {
               if (!tagStats[t]) tagStats[t] = { events: 0, files: new Set() };
-              tagStats[t].events += 1;
+              tagStats[t].events++;
               tagStats[t].files.add(ev.fileName);
             }
           }
-          const parts = [];
-          Object.keys(tagStats).sort().forEach(tag => {
-            const st = tagStats[tag];
-            parts.push(tag + ' – ' + st.events + ' events in ' + st.files.size + ' files');
-          });
-          taggingLine = 'Tagging summary: ' + parts.join('; ');
+          taggingLine = 'Tagging: ' + Object.keys(tagStats).sort()
+            .map(tag => tag + ' – ' + tagStats[tag].events + ' events').join('; ');
         }
 
         statusEl.innerHTML = taggingLine ? baseLine + '<br>' + taggingLine : baseLine;
@@ -339,8 +368,6 @@
         console.error(err);
         statusEl.textContent = 'Error while scanning: ' + err.message;
         downloadBtn.disabled = true;
-        tagConfigContainer.innerHTML = '';
-        tagConfigContainer.style.display = 'none';
       }
     });
 
@@ -348,86 +375,48 @@
     downloadBtn.addEventListener('click', () => {
       if (!parsedEvents.length) return;
       if (needsRescanForTagMode && tagMode !== 'none') {
-        alert('Calendar tagging mode has changed since the last scan. Please click "Scan & preview events" again before exporting.');
+        alert('Tag mode changed. Please re-scan before exporting.');
         return;
       }
-
       const filteredEvents = getFilteredEventsForCurrentConfig();
       if (!filteredEvents.length) {
-        alert('No events to export after applying the current calendar tag settings.');
+        alert('No events to export with the current tag settings.');
         return;
       }
 
       const icsText = buildICS(filteredEvents);
       const format  = formatSelect.value || 'ics';
       const extMap  = { ics: 'ics', ical: 'ical', icalendar: 'icalendar', ifb: 'ifb' };
-
-      const blob = new Blob([icsText], { type: 'text/calendar;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      const now  = new Date();
-      const y    = now.getFullYear();
-      const mo   = String(now.getMonth() + 1).padStart(2, '0');
-      const d    = String(now.getDate()).padStart(2, '0');
-      a.href     = url;
-      a.download = 'obsidian-daily-notes-' + y + mo + d + '.' + (extMap[format] || 'ics');
+      const blob    = new Blob([icsText], { type: 'text/calendar;charset=utf-8' });
+      const url     = URL.createObjectURL(blob);
+      const a       = document.createElement('a');
+      const now     = new Date();
+      a.href        = url;
+      a.download    = 'obsidian-daily-notes-' +
+        now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') +
+        '.' + (extMap[format] || 'ics');
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     });
 
-    // ── File system helpers ───────────────────────────────────────────────────
-
-    // Chromium: recursive directory walk via File System Access API
-    async function collectMarkdownFilesFromDir(dirHandle, eventsOut, filesCountRef, discoveredTags) {
-      for await (const [name, handle] of dirHandle.entries()) {
-        if (handle.kind === 'file' && name.toLowerCase().endsWith('.md')) {
-          filesCountRef.count++;
-          const file  = await handle.getFile();
-          const text  = await file.text();
-          const events = parseMarkdownToEvents(name, text);
-          for (const ev of events) {
-            for (const t of (ev.tags || [])) discoveredTags.add(t);
-          }
-          eventsOut.push(...events);
-        } else if (handle.kind === 'directory') {
-          await collectMarkdownFilesFromDir(handle, eventsOut, filesCountRef, discoveredTags);
-        }
-      }
-    }
-
-    // Fallback: process an array of File objects (Safari / Brave / Firefox)
-    async function collectMarkdownFromFileList(files, eventsOut, filesCountRef, discoveredTags) {
-      for (const file of files) {
-        filesCountRef.count++;
-        const text   = await file.text();
-        // Use only the filename part (last segment) for date parsing
-        const name   = file.name;
-        const events = parseMarkdownToEvents(name, text);
-        for (const ev of events) {
-          for (const t of (ev.tags || [])) discoveredTags.add(t);
-        }
-        eventsOut.push(...events);
-      }
-    }
-
-    // ── Parsing helpers ───────────────────────────────────────────────────────
+    // ── Parsing ───────────────────────────────────────────────────────────────
     function dateFromFilename(name) {
       const base = name.replace(/\.md$/i, '');
       const m    = base.match(/(\d{4})\s(\d{2})(\d{2})/);
       if (!m) return null;
-      const [_, y, mo, d] = m;
-      return { year: Number(y), month: Number(mo), day: Number(d) };
+      return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
     }
 
     function parseCompactTime(str) {
       const s = str.trim();
       if (!/^\d{3,4}$/.test(s)) return null;
-      let h, m;
-      if (s.length === 3) { h = Number(s[0]); m = Number(s.slice(1)); }
-      else                 { h = Number(s.slice(0, 2)); m = Number(s.slice(2)); }
-      if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+      const h = s.length === 3 ? Number(s[0])       : Number(s.slice(0, 2));
+      const m = s.length === 3 ? Number(s.slice(1))  : Number(s.slice(2));
+      if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
       return { h, m };
     }
 
@@ -437,35 +426,18 @@
       return new Date(dateObj.year, dateObj.month - 1, dateObj.day, t.h, t.m, 0, 0);
     }
 
-    function toICSDateTime(dt) {
-      const pad = n => String(n).padStart(2, '0');
-      return dt.getFullYear().toString() +
-        pad(dt.getMonth() + 1) + pad(dt.getDate()) + 'T' +
-        pad(dt.getHours()) + pad(dt.getMinutes()) + pad(dt.getSeconds());
-    }
-
-    function icsEscape(s) {
-      return s
-        .replace(/\\/g, '\\\\')
-        .replace(/;/g, '\\;')
-        .replace(/,/g, '\\,')
-        .replace(/\r?\n/g, '\\n');
-    }
-
     function extractLineTags(text) {
-      if (!text) return [];
-      const tags = new Set();
-      const re   = tagMode === 'hash' ? /#[^\s#@]+/g : tagMode === 'at' ? /@[^\s#@]+/g : null;
-      if (!re) return [];
+      if (!text || tagMode === 'none') return [];
+      const re  = tagMode === 'hash' ? /#[^\s#@]+/g : /@[^\s#@]+/g;
+      const out = new Set();
       let m;
-      while ((m = re.exec(text)) !== null) tags.add(m[0]);
-      return Array.from(tags);
+      while ((m = re.exec(text)) !== null) out.add(m[0]);
+      return Array.from(out);
     }
 
     function parseMarkdownToEvents(fileName, contents) {
       const dateObj = dateFromFilename(fileName);
       if (!dateObj) return [];
-
       const events = [];
       const lines  = contents.split(/\r?\n/);
       const re     = /^-\s*\[[ xX]?\]\s*(\d{3,4})\s*-\s*(\d{3,4})\s+(.+)$/;
@@ -473,58 +445,57 @@
       for (let i = 0; i < lines.length; i++) {
         const m = lines[i].match(re);
         if (!m) continue;
-
-        const [, startStr, endStr, summaryRaw] = m;
-        const start = makeDateTime(dateObj, startStr);
-        const end   = makeDateTime(dateObj, endStr);
+        const start = makeDateTime(dateObj, m[1]);
+        const end   = makeDateTime(dateObj, m[2]);
         if (!start || !end) continue;
 
         const details = [];
         let j = i + 1;
         while (j < lines.length) {
-          const ln      = lines[j];
-          const trimmed = ln.trim();
-          if (!trimmed) break;
-          if (/^-\s*\[[ xX]?\]/.test(ln)) break;
-          if (/^\s+[-*]\s+/.test(ln))  details.push(trimmed.replace(/^[-*]\s+/, ''));
-          else if (/^\s+/.test(ln))    details.push(trimmed);
+          const ln = lines[j], tr = ln.trim();
+          if (!tr || /^-\s*\[[ xX]?\]/.test(ln)) break;
+          if (/^\s+[-*]\s+/.test(ln))  details.push(tr.replace(/^[-*]\s+/, ''));
+          else if (/^\s+/.test(ln))    details.push(tr);
           else break;
           j++;
         }
 
         events.push({
-          summary:     summaryRaw.trim(),
-          location:    '',
+          summary: m[3].trim(), location: '',
           description: details.join('\n'),
           start, end, fileName,
-          tags: extractLineTags(summaryRaw),
+          tags: extractLineTags(m[3]),
         });
       }
       return events;
     }
 
     // ── ICS builder ───────────────────────────────────────────────────────────
-    function buildICS(events) {
-      const lines   = [];
-      const dtStamp = toICSDateTime(new Date());
-      lines.push('BEGIN:VCALENDAR', 'VERSION:2.0',
-        'PRODID:-//obsidian-daily-notes-to-ics//EN',
-        'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
+    function toICSDateTime(dt) {
+      const p = n => String(n).padStart(2, '0');
+      return dt.getFullYear() + p(dt.getMonth()+1) + p(dt.getDate()) +
+             'T' + p(dt.getHours()) + p(dt.getMinutes()) + p(dt.getSeconds());
+    }
 
+    function icsEscape(s) {
+      return s.replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+    }
+
+    function buildICS(events) {
+      const stamp = toICSDateTime(new Date());
+      const lines = ['BEGIN:VCALENDAR','VERSION:2.0',
+        'PRODID:-//obsidian-daily-notes-to-ics//EN',
+        'CALSCALE:GREGORIAN','METHOD:PUBLISH'];
       for (const ev of events) {
         const uid = 'obsidian-' + ev.start.getTime().toString(36) + '-' + Math.random().toString(36).slice(2);
-        lines.push('BEGIN:VEVENT',
-          'UID:' + uid,
-          'DTSTAMP:' + dtStamp,
-          'DTSTART:' + toICSDateTime(ev.start),
-          'DTEND:' + toICSDateTime(ev.end),
-          'SUMMARY:' + icsEscape(ev.summary));
-        if (ev.location)    lines.push('LOCATION:' + icsEscape(ev.location));
-        if (ev.description) lines.push('DESCRIPTION:' + icsEscape(ev.description));
-        if (ev.calendarKey) lines.push('CATEGORIES:' + icsEscape(ev.calendarKey));
+        lines.push('BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp,
+          'DTSTART:'+toICSDateTime(ev.start),'DTEND:'+toICSDateTime(ev.end),
+          'SUMMARY:'+icsEscape(ev.summary));
+        if (ev.location)    lines.push('LOCATION:'+icsEscape(ev.location));
+        if (ev.description) lines.push('DESCRIPTION:'+icsEscape(ev.description));
+        if (ev.calendarKey) lines.push('CATEGORIES:'+icsEscape(ev.calendarKey));
         lines.push('END:VEVENT');
       }
-
       lines.push('END:VCALENDAR');
       return lines.join('\r\n');
     }
@@ -537,84 +508,71 @@
         tagConfigContainer.style.display = 'none';
         return;
       }
-
       const tags = Array.from(discoveredTags).sort();
       let html = '<strong>Calendar tags detected</strong>';
-      html += '<p>Select which tags should define calendar categories. Events with no selected tag will be excluded.</p>';
+      html += '<p>Select which tags define calendar categories. Events with no selected tag will be excluded.</p>';
       html += '<table><thead><tr><th>Use</th><th>Tag</th><th>Calendar name</th></tr></thead><tbody>';
-
       tags.forEach((tag, idx) => {
         const base   = tag.replace(/^[#@]/, '');
         const pretty = base.split(/[\/_-]+/).filter(Boolean)
           .map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
         tagConfig[tag] = { enabled: true, name: pretty || base };
-        html += '<tr id="tag-row-' + idx + '">' +
-          '<td><input type="checkbox" data-tag="' + tag + '" checked></td>' +
+        html += '<tr><td><input type="checkbox" data-tag="' + tag + '" checked></td>' +
           '<td><code>' + tag + '</code></td>' +
-          '<td><input type="text" data-tag-name="' + tag + '" value="' + (pretty || base) + '"></td>' +
-          '</tr>';
+          '<td><input type="text" data-tag-name="' + tag + '" value="' + (pretty||base) + '"></td></tr>';
       });
-
       html += '</tbody></table>';
       tagConfigContainer.innerHTML = html;
       tagConfigContainer.style.display = 'block';
 
-      tagConfigContainer.querySelectorAll('input[type="checkbox"]').forEach(input => {
-        const tag = input.getAttribute('data-tag');
-        input.addEventListener('change', () => { if (tagConfig[tag]) { tagConfig[tag].enabled = input.checked; updatePreview(); } });
+      tagConfigContainer.querySelectorAll('input[type="checkbox"]').forEach(el => {
+        el.addEventListener('change', () => {
+          if (tagConfig[el.dataset.tag]) { tagConfig[el.dataset.tag].enabled = el.checked; updatePreview(); }
+        });
       });
-      tagConfigContainer.querySelectorAll('input[type="text"]').forEach(input => {
-        const tag = input.getAttribute('data-tag-name');
-        input.addEventListener('input', () => { if (tagConfig[tag]) { tagConfig[tag].name = input.value.trim() || tag.replace(/^[#@]/, ''); updatePreview(); } });
+      tagConfigContainer.querySelectorAll('input[type="text"]').forEach(el => {
+        el.addEventListener('input', () => {
+          if (tagConfig[el.dataset.tagName]) { tagConfig[el.dataset.tagName].name = el.value.trim() || el.dataset.tagName.replace(/^[#@]/,''); updatePreview(); }
+        });
       });
     }
 
     // ── Filtering ─────────────────────────────────────────────────────────────
     function getFilteredEventsForCurrentConfig() {
-      const result = [];
-      for (const ev of parsedEvents) {
-        if (tagMode === 'none') { result.push({ ...ev, calendarKey: null }); continue; }
-
-        const matching = (ev.tags || []).filter(t => tagConfig[t] && tagConfig[t].enabled);
-        if (!matching.length) continue;
-
-        const cfg     = tagConfig[matching[0]];
-        const calName = (cfg && cfg.name) ? cfg.name : matching[0].replace(/^[#@]/, '');
-        let summaryTitle = ev.summary;
-
+      return parsedEvents.reduce((acc, ev) => {
+        if (tagMode === 'none') { acc.push({ ...ev, calendarKey: null }); return acc; }
+        const matching = (ev.tags || []).filter(t => tagConfig[t]?.enabled);
+        if (!matching.length) return acc;
+        const cfg  = tagConfig[matching[0]];
+        let title  = ev.summary;
         if (stripTagsFromSummary) {
           for (const t of matching) {
-            const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            summaryTitle  = summaryTitle.replace(new RegExp('(?:\\s+|^)' + escaped + '(?=\\s|$)', 'g'), '').trim();
+            title = title.replace(new RegExp('(?:\\s+|^)' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?=\\s|$)','g'), '').trim();
           }
         }
-        result.push({ ...ev, calendarKey: calName, summary: summaryTitle });
-      }
-      return result;
+        acc.push({ ...ev, calendarKey: cfg?.name || matching[0].replace(/^[#@]/,''), summary: title });
+        return acc;
+      }, []);
     }
 
     // ── Preview ───────────────────────────────────────────────────────────────
     function updatePreview() {
       if (!parsedEvents.length) { previewEl.textContent = '(No events parsed yet.)'; return; }
       if (needsRescanForTagMode && tagMode !== 'none') {
-        previewEl.textContent = 'Calendar tagging mode changed. Please click "Scan & preview events" again to update events and tag configuration.';
-        return;
+        previewEl.textContent = 'Tag mode changed — please re-scan.'; return;
       }
-
       const filtered = getFilteredEventsForCurrentConfig();
       if (!filtered.length) {
         previewEl.textContent = tagMode === 'none'
           ? 'No events found.'
-          : 'No events match the current calendar tag settings.\n\nCheck that your tasks contain the chosen tags/labels and that they are enabled in the table above.';
+          : 'No events match the current tag settings.\n\nEnable tags in the table above.';
         return;
       }
-
       previewEl.textContent = filtered.map(ev => {
-        const pad = n => String(n).padStart(2, '0');
-        const t   = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
-        const cal = ev.calendarKey ? ' {' + ev.calendarKey + '}' : '';
-        return ev.start.toISOString().slice(0, 10) + ' ' + t(ev.start) + '-' + t(ev.end) +
-          '  ' + ev.summary + cal + '  [' + ev.fileName + ']';
+        const p = n => String(n).padStart(2,'0');
+        const t = d => p(d.getHours())+':'+p(d.getMinutes());
+        return ev.start.toISOString().slice(0,10)+' '+t(ev.start)+'-'+t(ev.end)+
+          '  '+ev.summary+(ev.calendarKey?' {'+ev.calendarKey+'}':'')+' ['+ev.fileName+']';
       }).join('\n');
     }
   </script>
