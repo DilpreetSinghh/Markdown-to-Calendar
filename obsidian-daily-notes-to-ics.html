@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Obsidian Daily Notes → iCalendar</title>
+  <title>Markdown to Calendar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -78,20 +78,19 @@
   </style>
 </head>
 <body>
-  <h1>Obsidian Daily Notes → iCalendar</h1>
+  <h1>Markdown to Calendar</h1>
 
   <p style="max-width: 40rem; font-size: 0.95rem;">
-    Pick your Obsidian daily-notes folder, scan recursively for time-block tasks (completed and
-    incomplete, including subfolders), then download a combined calendar file (.ics, .ical,
-    .icalendar or .ifb). Indented bullets under a task become the event description. Optionally,
-    use #tags or @labels on task lines to categorise events.
+    Convert Obsidian daily-note time blocks into calendar events — fully offline, right in your browser.
+    No data leaves your device. Supports subfolders, #tags, @labels, and all major calendar formats
+    (.ics, .ical, .icalendar, .ifb).
   </p>
 
-  <!--
-    Method 1 (Chromium): showDirectoryPicker — triggered via JS
-    Method 2 (All browsers): <input webkitdirectory> — whole folder, one click
-    Method 3 (All browsers): drag & drop a folder onto the drop zone
-  -->
+  <p style="max-width: 40rem; font-size: 0.92rem; margin-top: 0.5rem;">
+    Free &amp; open source. Found it useful? 🐙 Star it 🤩 on
+    <a href="https://github.com/DilpreetSinghh/Markdown-to-Calendar" target="_blank" rel="noopener noreferrer">GitHub</a>
+    — it means a lot 😍
+  </p>
 
   <!-- webkitdirectory input — works on Safari 11.1+, Firefox, Chrome, Edge -->
   <input type="file" id="folderInputNative" webkitdirectory mozdirectory directory multiple accept=".md" />
@@ -99,17 +98,17 @@
   <input type="file" id="folderInputFallback" multiple accept=".md" />
 
   <!-- Drag & drop zone — universally supported -->
-  <div id="dropZone" title="Or drag your daily-notes folder here">
+  <div id="dropZone" title="Or drag your Markdown files or folder here">
     <span class="drop-icon">📂</span>
-    <strong>Drag &amp; drop your daily-notes folder here</strong>
+    <strong>Drag &amp; Drop Files or Folder with Markdown(.md) files</strong>
     <small>or use the button below to browse</small>
   </div>
 
   <div class="controls">
-    <button id="pickFolderBtn">1. Pick daily-notes folder</button>
-    <button id="scanBtn" disabled>2. Scan &amp; preview events</button>
+    <button id="pickFolderBtn">Select Folder</button>
+    <button id="scanBtn" disabled>Scan and Preview Events</button>
 
-    <label for="tagModeSelect">Calendar tagging:
+    <label for="tagModeSelect">Tag(s) for Calendar(s):
       <select id="tagModeSelect">
         <option value="none">No explicit calendar tags</option>
         <option value="hash">Use #tags (e.g. #work, #personal)</option>
@@ -117,7 +116,7 @@
       </select>
     </label>
 
-    <label for="formatSelect">Format:
+    <label for="formatSelect">Calendar File Format:
       <select id="formatSelect">
         <option value="ics">.ics (default)</option>
         <option value="ical">.ical</option>
@@ -127,7 +126,7 @@
     </label>
   </div>
 
-  <div id="status">No folder selected yet.</div>
+  <div id="status">No file/folder parsed yet!</div>
   <div id="tagConfigContainer"></div>
 
   <div id="stripTagsWrapper">
@@ -138,28 +137,24 @@
   </div>
 
   <div id="downloadBtnWrapper">
-    <button id="downloadBtn" class="primary" disabled>3. Download</button>
+    <button id="downloadBtn" class="primary" disabled>Download Calendar File</button>
   </div>
 
-  <pre id="preview">(No events parsed yet.)</pre>
+  <pre id="preview">No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.</pre>
 
   <script>
-    // ── Capability detection ──────────────────────────────────────────────────
     const supportsDirectoryPicker  = typeof window.showDirectoryPicker === 'function';
     const supportsWebkitDirectory  = 'webkitdirectory' in document.createElement('input');
-    // DataTransferItem.webkitGetAsEntry is supported in Chrome, Firefox, Safari 11.1+
     const supportsDnDEntries       = typeof DataTransferItem !== 'undefined' &&
                                      typeof DataTransferItem.prototype.webkitGetAsEntry === 'function';
 
-    // ── State ─────────────────────────────────────────────────────────────────
-    let collectedFiles        = [];   // always an array of File objects
+    let collectedFiles        = [];
     let parsedEvents          = [];
     let tagMode               = 'none';
     let tagConfig             = {};
     let stripTagsFromSummary  = true;
     let needsRescanForTagMode = false;
 
-    // ── DOM refs ──────────────────────────────────────────────────────────────
     const pickFolderBtn       = document.getElementById('pickFolderBtn');
     const scanBtn             = document.getElementById('scanBtn');
     const downloadBtn         = document.getElementById('downloadBtn');
@@ -173,24 +168,22 @@
     const folderInputNative   = document.getElementById('folderInputNative');
     const folderInputFallback = document.getElementById('folderInputFallback');
 
-    // ── Helpers: reset state after new folder/files chosen ───────────────────
     function onFilesReady(files, label) {
       collectedFiles = files.filter(f => f.name.toLowerCase().endsWith('.md'));
       if (!collectedFiles.length) {
         statusEl.textContent = 'No .md files found in the selection.';
         return;
       }
-      statusEl.textContent = '📁 ' + label + ' — ' + collectedFiles.length + ' .md file(s) ready. Click "Scan & preview events".';
+      statusEl.textContent = '📁 ' + label + ' — ' + collectedFiles.length + ' .md file(s) ready. Click "Scan and Preview Events".';
       scanBtn.disabled      = false;
       downloadBtn.disabled  = true;
-      previewEl.textContent = '(No events parsed yet.)';
+      previewEl.textContent = 'No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.';
       parsedEvents          = [];
       tagConfigContainer.innerHTML    = '';
       tagConfigContainer.style.display = 'none';
       needsRescanForTagMode = false;
     }
 
-    // ── METHOD 1: Chromium — showDirectoryPicker ──────────────────────────────
     async function pickViaDirectoryPicker() {
       try {
         const dirHandle = await window.showDirectoryPicker({ id: 'obsidian-daily-notes' });
@@ -214,14 +207,12 @@
       }
     }
 
-    // ── METHOD 2: webkitdirectory <input> — Safari, Firefox, Chrome ──────────
     folderInputNative.addEventListener('change', () => {
       const files = Array.from(folderInputNative.files);
       const name  = files[0] ? (files[0].webkitRelativePath.split('/')[0] || 'folder') : 'folder';
       onFilesReady(files, name);
     });
 
-    // ── METHOD 3: Drag & Drop (all browsers, including Safari 11.1+) ─────────
     dropZone.addEventListener('dragover', e => {
       e.preventDefault();
       dropZone.classList.add('dragover');
@@ -236,26 +227,19 @@
       const items = Array.from(e.dataTransfer.items || []);
 
       if (supportsDnDEntries && items.length) {
-        // Use webkitGetAsEntry to recursively walk dropped folders
         const entries = items.map(i => i.webkitGetAsEntry()).filter(Boolean);
-        for (const entry of entries) {
-          await walkEntry(entry, files);
-        }
+        for (const entry of entries) await walkEntry(entry, files);
       } else {
-        // Fallback: flat list from dataTransfer.files (no recursion, still works for flat folders)
         files.push(...Array.from(e.dataTransfer.files));
       }
 
-      const folderName = (e.dataTransfer.items && e.dataTransfer.items[0])
-        ? (e.dataTransfer.items[0].webkitGetAsEntry
-            ? (e.dataTransfer.items[0].webkitGetAsEntry() || {}).name || 'dropped folder'
-            : 'dropped folder')
+      const folderName = (items[0] && items[0].webkitGetAsEntry)
+        ? ((items[0].webkitGetAsEntry() || {}).name || 'dropped folder')
         : 'dropped folder';
 
       onFilesReady(files, folderName);
     });
 
-    // Recursive walk of a FileSystemEntry (used in drag & drop)
     async function walkEntry(entry, out) {
       if (!entry) return;
       if (entry.isFile) {
@@ -265,7 +249,6 @@
         }
       } else if (entry.isDirectory) {
         const reader = entry.createReader();
-        // readEntries may return results in batches — loop until empty
         let batch;
         do {
           batch = await new Promise((res, rej) => reader.readEntries(res, rej));
@@ -274,37 +257,29 @@
       }
     }
 
-    // Also allow clicking the drop zone to trigger pick
     dropZone.addEventListener('click', () => pickFolderBtn.click());
 
-    // ── Pick folder button — chooses best available method ───────────────────
     pickFolderBtn.addEventListener('click', async () => {
       if (supportsDirectoryPicker) {
-        // Best: native OS folder dialog (Chromium)
         await pickViaDirectoryPicker();
       } else if (supportsWebkitDirectory) {
-        // Good: folder picker via <input webkitdirectory> (Safari, Firefox)
         folderInputNative.value = '';
         folderInputNative.click();
       } else {
-        // Last resort: multi-file picker
         folderInputFallback.value = '';
         folderInputFallback.click();
       }
     });
 
-    // Last-resort fallback input listener
     folderInputFallback.addEventListener('change', () => {
-      const files = Array.from(folderInputFallback.files);
-      onFilesReady(files, 'selected files');
+      onFilesReady(Array.from(folderInputFallback.files), 'selected files');
     });
 
-    // ── Tag mode change ───────────────────────────────────────────────────────
     tagModeSelect.addEventListener('change', () => {
       const newMode = tagModeSelect.value || 'none';
       if (newMode !== tagMode && parsedEvents.length) {
         needsRescanForTagMode = true;
-        statusEl.textContent = 'Calendar tagging mode changed. Please click "Scan & preview events" again to refresh tags.';
+        statusEl.textContent = 'Calendar tagging mode changed. Please click "Scan and Preview Events" again to refresh tags.';
         downloadBtn.disabled = true;
         tagConfigContainer.innerHTML = '';
         tagConfigContainer.style.display = 'none';
@@ -318,7 +293,6 @@
       updatePreview();
     });
 
-    // ── Scan button ───────────────────────────────────────────────────────────
     scanBtn.addEventListener('click', async () => {
       if (!collectedFiles.length) { statusEl.textContent = 'No files to scan.'; return; }
       statusEl.textContent = 'Scanning ' + collectedFiles.length + ' markdown file(s)…';
@@ -371,7 +345,6 @@
       }
     });
 
-    // ── Download button ───────────────────────────────────────────────────────
     downloadBtn.addEventListener('click', () => {
       if (!parsedEvents.length) return;
       if (needsRescanForTagMode && tagMode !== 'none') {
@@ -392,7 +365,7 @@
       const a       = document.createElement('a');
       const now     = new Date();
       a.href        = url;
-      a.download    = 'obsidian-daily-notes-' +
+      a.download    = 'markdown-to-calendar-' +
         now.getFullYear() +
         String(now.getMonth() + 1).padStart(2, '0') +
         String(now.getDate()).padStart(2, '0') +
@@ -403,7 +376,6 @@
       URL.revokeObjectURL(url);
     });
 
-    // ── Parsing ───────────────────────────────────────────────────────────────
     function dateFromFilename(name) {
       const base = name.replace(/\.md$/i, '');
       const m    = base.match(/(\d{4})\s(\d{2})(\d{2})/);
@@ -414,8 +386,8 @@
     function parseCompactTime(str) {
       const s = str.trim();
       if (!/^\d{3,4}$/.test(s)) return null;
-      const h = s.length === 3 ? Number(s[0])       : Number(s.slice(0, 2));
-      const m = s.length === 3 ? Number(s.slice(1))  : Number(s.slice(2));
+      const h = s.length === 3 ? Number(s[0])      : Number(s.slice(0, 2));
+      const m = s.length === 3 ? Number(s.slice(1)) : Number(s.slice(2));
       if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
       return { h, m };
     }
@@ -470,7 +442,6 @@
       return events;
     }
 
-    // ── ICS builder ───────────────────────────────────────────────────────────
     function toICSDateTime(dt) {
       const p = n => String(n).padStart(2, '0');
       return dt.getFullYear() + p(dt.getMonth()+1) + p(dt.getDate()) +
@@ -484,10 +455,10 @@
     function buildICS(events) {
       const stamp = toICSDateTime(new Date());
       const lines = ['BEGIN:VCALENDAR','VERSION:2.0',
-        'PRODID:-//obsidian-daily-notes-to-ics//EN',
+        'PRODID:-//markdown-to-calendar//EN',
         'CALSCALE:GREGORIAN','METHOD:PUBLISH'];
       for (const ev of events) {
-        const uid = 'obsidian-' + ev.start.getTime().toString(36) + '-' + Math.random().toString(36).slice(2);
+        const uid = 'md2cal-' + ev.start.getTime().toString(36) + '-' + Math.random().toString(36).slice(2);
         lines.push('BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp,
           'DTSTART:'+toICSDateTime(ev.start),'DTEND:'+toICSDateTime(ev.end),
           'SUMMARY:'+icsEscape(ev.summary));
@@ -500,7 +471,6 @@
       return lines.join('\r\n');
     }
 
-    // ── Tag config UI ─────────────────────────────────────────────────────────
     function buildTagConfigUI(discoveredTags) {
       tagConfig = {};
       if (tagMode === 'none' || !discoveredTags.size) {
@@ -532,12 +502,14 @@
       });
       tagConfigContainer.querySelectorAll('input[type="text"]').forEach(el => {
         el.addEventListener('input', () => {
-          if (tagConfig[el.dataset.tagName]) { tagConfig[el.dataset.tagName].name = el.value.trim() || el.dataset.tagName.replace(/^[#@]/,''); updatePreview(); }
+          if (tagConfig[el.dataset.tagName]) {
+            tagConfig[el.dataset.tagName].name = el.value.trim() || el.dataset.tagName.replace(/^[#@]/,'');
+            updatePreview();
+          }
         });
       });
     }
 
-    // ── Filtering ─────────────────────────────────────────────────────────────
     function getFilteredEventsForCurrentConfig() {
       return parsedEvents.reduce((acc, ev) => {
         if (tagMode === 'none') { acc.push({ ...ev, calendarKey: null }); return acc; }
@@ -547,7 +519,10 @@
         let title  = ev.summary;
         if (stripTagsFromSummary) {
           for (const t of matching) {
-            title = title.replace(new RegExp('(?:\\s+|^)' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?=\\s|$)','g'), '').trim();
+            title = title.replace(
+              new RegExp('(?:\\s+|^)' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(?=\\s|$)','g'),
+              ''
+            ).trim();
           }
         }
         acc.push({ ...ev, calendarKey: cfg?.name || matching[0].replace(/^[#@]/,''), summary: title });
@@ -555,9 +530,11 @@
       }, []);
     }
 
-    // ── Preview ───────────────────────────────────────────────────────────────
     function updatePreview() {
-      if (!parsedEvents.length) { previewEl.textContent = '(No events parsed yet.)'; return; }
+      if (!parsedEvents.length) {
+        previewEl.textContent = 'No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.';
+        return;
+      }
       if (needsRescanForTagMode && tagMode !== 'none') {
         previewEl.textContent = 'Tag mode changed — please re-scan.'; return;
       }
