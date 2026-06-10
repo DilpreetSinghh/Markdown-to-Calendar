@@ -11,6 +11,30 @@
       background: #f7f6f2; color: #222;
     }
     h1 { font-size: 1.6rem; margin-bottom: 0.75rem; }
+
+    .mode-switch {
+      display: inline-flex;
+      border-radius: 9999px;
+      border: 1px solid #d0d0c5;
+      background: #f3f2ec;
+      padding: 0.15rem;
+      margin: 0 0 1rem;
+    }
+    .mode-segment {
+      border: none;
+      background: transparent;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.9rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      color: #555;
+    }
+    .mode-segment.active {
+      background: rgba(1, 105, 111, 0.12);
+      color: #01696f;
+      font-weight: 500;
+    }
+
     .controls {
       display: flex; flex-wrap: wrap; gap: 0.75rem;
       margin-bottom: 1rem; align-items: center;
@@ -51,8 +75,7 @@
     #stripTagsWrapper { margin: 0 0 0.5rem; font-size: 0.85rem; }
     #downloadBtnWrapper { margin: 0.5rem 0 0.75rem; }
 
-    /* ── Drag-and-drop zone ── */
-    #dropZone {
+    .drop-zone {
       border: 2px dashed #b0b0a0;
       border-radius: 0.6rem;
       padding: 1.2rem 1rem;
@@ -64,83 +87,133 @@
       cursor: pointer;
       user-select: none;
     }
-    #dropZone.dragover {
+    .drop-zone.dragover {
       background: #e8f4f4;
       border-color: #01696f;
       color: #01696f;
     }
-    #dropZone .drop-icon { font-size: 2rem; display: block; margin-bottom: 0.3rem; }
-    #dropZone small { display: block; margin-top: 0.25rem; color: #aaa; font-size: 0.8rem; }
+    .drop-zone .drop-icon { font-size: 2rem; display: block; margin-bottom: 0.3rem; }
+    .drop-zone small { display: block; margin-top: 0.25rem; color: #aaa; font-size: 0.8rem; }
 
-    /* Hidden inputs */
     #folderInputNative { display: none; }
     #folderInputFallback { display: none; }
+    #icsFileInput { display: none; }
   </style>
 </head>
 <body>
   <h1>Markdown to Calendar</h1>
 
-  <p style="max-width: 40rem; font-size: 0.95rem;">
-    Convert Obsidian daily-note time blocks into calendar events — fully offline, right in your browser.
-    No data leaves your device. Supports subfolders, #tags, @labels, and all major calendar formats
-    (.ics, .ical, .icalendar, .ifb).
-  </p>
-
-  <p style="max-width: 40rem; font-size: 0.92rem; margin-top: 0.5rem;">
-    Free &amp; open source. Found it useful? 🐙 Star it 🤩 on
-    <a href="https://github.com/DilpreetSinghh/Markdown-to-Calendar" target="_blank" rel="noopener noreferrer">GitHub</a>
-    — it means a lot 😍
-  </p>
-
-  <!-- webkitdirectory input — works on Safari 11.1+, Firefox, Chrome, Edge -->
-  <input type="file" id="folderInputNative" webkitdirectory mozdirectory directory multiple accept=".md" />
-  <!-- Plain multi-file fallback (last resort, older browsers) -->
-  <input type="file" id="folderInputFallback" multiple accept=".md" />
-
-  <!-- Drag & drop zone — universally supported -->
-  <div id="dropZone" title="Or drag your Markdown files or folder here">
-    <span class="drop-icon">📂</span>
-    <strong>Drag &amp; Drop Files or Folder with Markdown(.md) files</strong>
-    <small>or use the button below to browse</small>
+  <div class="mode-switch" aria-label="Conversion mode">
+    <button class="mode-segment active" type="button" data-mode="md-to-ics" aria-pressed="true">
+      Markdown 0 Calendar
+    </button>
+    <button class="mode-segment" type="button" data-mode="ics-to-md" aria-pressed="false">
+      Calendar 0 Markdown
+    </button>
   </div>
 
-  <div class="controls">
-    <button id="pickFolderBtn">Select Folder</button>
-    <button id="scanBtn" disabled>Scan and Preview Events</button>
+  <div id="md-to-ics-panel">
+    <p style="max-width: 40rem; font-size: 0.95rem;">
+      Convert Obsidian daily-note time blocks into calendar events 0 fully offline, right in your browser.
+      No data leaves your device. Supports subfolders, #tags, @labels, and all major calendar formats
+      (.ics, .ical, .icalendar, .ifb).
+    </p>
 
-    <label for="tagModeSelect">Tag(s) for Calendar(s):
-      <select id="tagModeSelect">
-        <option value="none">No explicit calendar tags</option>
-        <option value="hash">Use #tags (e.g. #work, #personal)</option>
-        <option value="at">Use @labels (e.g. @work, @personal)</option>
-      </select>
-    </label>
+    <p style="max-width: 40rem; font-size: 0.92rem; margin-top: 0.5rem;">
+      Free &amp; open source. Found it useful? 🐙 Star it 🤩 on
+      <a href="https://github.com/DilpreetSinghh/Markdown-to-Calendar" target="_blank" rel="noopener noreferrer">GitHub</a>
+      0 it means a lot 😍
+    </p>
 
-    <label for="formatSelect">Calendar File Format:
-      <select id="formatSelect">
-        <option value="ics">.ics (default)</option>
-        <option value="ical">.ical</option>
-        <option value="icalendar">.icalendar</option>
-        <option value="ifb">.ifb (free/busy apps)</option>
-      </select>
-    </label>
+    <input type="file" id="folderInputNative" webkitdirectory mozdirectory directory multiple accept=".md" />
+    <input type="file" id="folderInputFallback" multiple accept=".md" />
+
+    <div id="dropZone" class="drop-zone" title="Or drag your Markdown files or folder here">
+      <span class="drop-icon">📂</span>
+      <strong>Drag &amp; Drop Files or Folder with Markdown(.md) files</strong>
+      <small>or use the button below to browse</small>
+    </div>
+
+    <div class="controls">
+      <button id="pickFolderBtn">Select Folder</button>
+      <button id="scanBtn" disabled>Scan and Preview Events</button>
+
+      <label for="tagModeSelect">Tag(s) for Calendar(s):
+        <select id="tagModeSelect">
+          <option value="none">No explicit calendar tags</option>
+          <option value="hash">Use #tags (e.g. #work, #personal)</option>
+          <option value="at">Use @labels (e.g. @work, @personal)</option>
+        </select>
+      </label>
+
+      <label for="formatSelect">Calendar File Format:
+        <select id="formatSelect">
+          <option value="ics">.ics (default)</option>
+          <option value="ical">.ical</option>
+          <option value="icalendar">.icalendar</option>
+          <option value="ifb">.ifb (free/busy apps)</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="status">No file/folder parsed yet!</div>
+    <div id="tagConfigContainer"></div>
+
+    <div id="stripTagsWrapper">
+      <label>
+        <input type="checkbox" id="stripTagsCheckbox" checked>
+        Remove selected calendar tags from event titles
+      </label>
+    </div>
+
+    <div id="downloadBtnWrapper">
+      <button id="downloadBtn" class="primary" disabled>Download Calendar File</button>
+    </div>
+
+    <pre id="preview">No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.</pre>
   </div>
 
-  <div id="status">No file/folder parsed yet!</div>
-  <div id="tagConfigContainer"></div>
+  <div id="ics-to-md-panel" style="display:none;">
+    <p style="max-width: 40rem; font-size: 0.95rem;">
+      Convert calendar files (.ics, .ical, .icalendar, .ifb) into Obsidian-style daily note time blocks.
+      Everything runs fully offline in your browser.
+    </p>
 
-  <div id="stripTagsWrapper">
-    <label>
-      <input type="checkbox" id="stripTagsCheckbox" checked>
-      Remove selected calendar tags from event titles
-    </label>
+    <div id="icsDropZone" class="drop-zone" title="Drag calendar files here">
+      <span class="drop-icon">📅</span>
+      <strong>Drag &amp; Drop calendar files (.ics, .ical, .icalendar, .ifb)</strong>
+      <small>or use the button below to browse</small>
+    </div>
+
+    <input type="file" id="icsFileInput" multiple accept=".ics,.ical,.icalendar,.ifb" />
+
+    <div class="controls">
+      <button id="pickICSBtn" type="button">Select Calendar Files</button>
+
+      <label for="reverseTagModeSelect">Tag output for calendars:
+        <select id="reverseTagModeSelect">
+          <option value="none">No tags</option>
+          <option value="hash">Use #tags from CATEGORIES</option>
+          <option value="at">Use @labels from CATEGORIES</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="icsStatus" style="margin:0.5rem 0 0.75rem; font-size:0.9rem; color:#555;">
+      No calendar file processed yet.
+    </div>
+
+    <div id="icsDownloadBtnWrapper" style="margin:0.5rem 0 0.75rem;">
+      <button id="convertToMarkdownBtn" class="primary" type="button" disabled>
+        Convert to Markdown
+      </button>
+      <button id="downloadMarkdownBtn" type="button" disabled>
+        Download Markdown
+      </button>
+    </div>
+
+    <pre id="mdPreview">No calendar file has been processed yet.</pre>
   </div>
-
-  <div id="downloadBtnWrapper">
-    <button id="downloadBtn" class="primary" disabled>Download Calendar File</button>
-  </div>
-
-  <pre id="preview">No file/folder has scanned yet. Try Clicking on "Scan and Preview Events" button.</pre>
 
   <script>
     const supportsDirectoryPicker  = typeof window.showDirectoryPicker === 'function';
@@ -155,6 +228,13 @@
     let stripTagsFromSummary  = true;
     let needsRescanForTagMode = false;
 
+    let currentMode           = 'md-to-ics';
+
+    let collectedICSFiles     = [];
+    let parsedICSEvents       = [];
+    let reverseTagMode        = 'none';
+    let generatedMarkdown     = '';
+
     const pickFolderBtn       = document.getElementById('pickFolderBtn');
     const scanBtn             = document.getElementById('scanBtn');
     const downloadBtn         = document.getElementById('downloadBtn');
@@ -167,6 +247,42 @@
     const dropZone            = document.getElementById('dropZone');
     const folderInputNative   = document.getElementById('folderInputNative');
     const folderInputFallback = document.getElementById('folderInputFallback');
+
+    const modeSegments        = document.querySelectorAll('.mode-segment');
+    const mdToIcsPanel        = document.getElementById('md-to-ics-panel');
+    const icsToMdPanel        = document.getElementById('ics-to-md-panel');
+
+    const icsDropZone         = document.getElementById('icsDropZone');
+    const icsFileInput        = document.getElementById('icsFileInput');
+    const pickICSBtn          = document.getElementById('pickICSBtn');
+    const reverseTagModeSelect= document.getElementById('reverseTagModeSelect');
+    const icsStatus           = document.getElementById('icsStatus');
+    const convertToMarkdownBtn= document.getElementById('convertToMarkdownBtn');
+    const downloadMarkdownBtn = document.getElementById('downloadMarkdownBtn');
+    const mdPreview           = document.getElementById('mdPreview');
+
+    modeSegments.forEach(seg => {
+      seg.addEventListener('click', () => {
+        const mode = seg.dataset.mode;
+        if (!mode || mode === currentMode) return;
+
+        currentMode = mode;
+
+        modeSegments.forEach(s => {
+          const active = s.dataset.mode === currentMode;
+          s.classList.toggle('active', active);
+          s.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        if (currentMode === 'md-to-ics') {
+          mdToIcsPanel.style.display = '';
+          icsToMdPanel.style.display = 'none';
+        } else {
+          mdToIcsPanel.style.display = 'none';
+          icsToMdPanel.style.display = '';
+        }
+      });
+    });
 
     function onFilesReady(files, label) {
       collectedFiles = files.filter(f => f.name.toLowerCase().endsWith('.md'));
@@ -375,6 +491,257 @@
       a.remove();
       URL.revokeObjectURL(url);
     });
+
+    reverseTagModeSelect.addEventListener('change', () => {
+      reverseTagMode = reverseTagModeSelect.value || 'none';
+      if (parsedICSEvents.length && generatedMarkdown) {
+        generatedMarkdown = formatEventsAsMarkdown(parsedICSEvents, reverseTagMode);
+        mdPreview.textContent = generatedMarkdown;
+      }
+    });
+
+    pickICSBtn.addEventListener('click', () => {
+      icsFileInput.value = '';
+      icsFileInput.click();
+    });
+
+    icsFileInput.addEventListener('change', () => {
+      const files = Array.from(icsFileInput.files || []);
+      onICSFilesSelected(files, 'selected calendar files');
+    });
+
+    icsDropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      icsDropZone.classList.add('dragover');
+    });
+
+    icsDropZone.addEventListener('dragleave', () => {
+      icsDropZone.classList.remove('dragover');
+    });
+
+    icsDropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      icsDropZone.classList.remove('dragover');
+
+      const files = Array.from(e.dataTransfer.files || [])
+        .filter(f => /\.(ics|ical|icalendar|ifb)$/i.test(f.name));
+
+      onICSFilesSelected(files, 'dropped calendar files');
+    });
+
+    function onICSFilesSelected(files, label) {
+      collectedICSFiles = files;
+      parsedICSEvents   = [];
+      generatedMarkdown = '';
+      mdPreview.textContent = 'No calendar file has been processed yet.';
+
+      if (!collectedICSFiles.length) {
+        icsStatus.textContent = 'No supported calendar files found.';
+        convertToMarkdownBtn.disabled = true;
+        downloadMarkdownBtn.disabled  = true;
+        return;
+      }
+
+      icsStatus.textContent =
+        '📅 ' + label + ' — ' + collectedICSFiles.length + ' file(s) ready. Click "Convert to Markdown".';
+      convertToMarkdownBtn.disabled = false;
+      downloadMarkdownBtn.disabled  = true;
+    }
+
+    convertToMarkdownBtn.addEventListener('click', async () => {
+      if (!collectedICSFiles.length) {
+        icsStatus.textContent = 'No calendar files to process.';
+        return;
+      }
+
+      icsStatus.textContent = 'Parsing ' + collectedICSFiles.length + ' calendar file(s)…';
+      parsedICSEvents = [];
+
+      try {
+        for (const file of collectedICSFiles) {
+          const text   = await file.text();
+          const events = parseICS(text, file.name);
+          parsedICSEvents.push(...events);
+        }
+
+        if (!parsedICSEvents.length) {
+          icsStatus.textContent = 'No VEVENT entries found in the selected files.';
+          mdPreview.textContent = 'No events parsed.';
+          convertToMarkdownBtn.disabled = false;
+          downloadMarkdownBtn.disabled  = true;
+          return;
+        }
+
+        generatedMarkdown = formatEventsAsMarkdown(parsedICSEvents, reverseTagMode);
+        mdPreview.textContent = generatedMarkdown;
+        icsStatus.textContent =
+          'Parsed ' + parsedICSEvents.length + ' event(s) from ' + collectedICSFiles.length + ' file(s).';
+        downloadMarkdownBtn.disabled = false;
+      } catch (err) {
+        console.error(err);
+        icsStatus.textContent = 'Error while parsing calendar files: ' + err.message;
+        downloadMarkdownBtn.disabled  = true;
+      }
+    });
+
+    downloadMarkdownBtn.addEventListener('click', () => {
+      if (!generatedMarkdown) {
+        alert('No Markdown output to download yet.');
+        return;
+      }
+      const blob = new Blob([generatedMarkdown], { type: 'text/markdown;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const now  = new Date();
+      a.href     = url;
+      a.download =
+        'calendar-to-markdown-' +
+        now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') +
+        '.md';
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    function parseICS(text, fileName) {
+      const lines = text.split(/\r?\n/);
+      const events = [];
+      let current = null;
+
+      for (let raw of lines) {
+        const line = raw.trim();
+        if (line === 'BEGIN:VEVENT') {
+          current = { props: {}, fileName };
+        } else if (line === 'END:VEVENT') {
+          if (current) {
+            const ev = buildEventFromICSProps(current.props, current.fileName);
+            if (ev) events.push(ev);
+          }
+          current = null;
+        } else if (current && line && !line.startsWith('BEGIN:') && !line.startsWith('END:')) {
+          const idx = line.indexOf(':');
+          if (idx === -1) continue;
+          const keyPart = line.slice(0, idx);
+          const value   = line.slice(idx + 1);
+
+          const key = keyPart.split(';')[0].toUpperCase();
+          if (!current.props[key]) current.props[key] = [];
+          current.props[key].push(value);
+        }
+      }
+
+      return events;
+    }
+
+    function buildEventFromICSProps(props, fileName) {
+      const dtStartRaw = getFirstICSValue(props, 'DTSTART');
+      const dtEndRaw   = getFirstICSValue(props, 'DTEND');
+      const summary    = getFirstICSValue(props, 'SUMMARY') || '';
+      const description= getFirstICSValue(props, 'DESCRIPTION') || '';
+      const categories = getFirstICSValue(props, 'CATEGORIES') || '';
+
+      if (!dtStartRaw || !dtEndRaw || !summary) return null;
+
+      const start = parseICSTimestamp(dtStartRaw);
+      const end   = parseICSTimestamp(dtEndRaw);
+      if (!start || !end) return null;
+
+      const tags = extractCategoriesAsTags(categories, reverseTagMode);
+
+      return {
+        summary: summary.trim(),
+        description: description.replace(/\\n/g, '\n').trim(),
+        start,
+        end,
+        location: '',
+        fileName,
+        tags,
+        calendarKey: null
+      };
+    }
+
+    function getFirstICSValue(props, key) {
+      const arr = props[key];
+      return Array.isArray(arr) && arr.length ? arr[0] : null;
+    }
+
+    function parseICSTimestamp(value) {
+      const m = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+      if (!m) return null;
+      const year  = Number(m[1]);
+      const month = Number(m[2]) - 1;
+      const day   = Number(m[3]);
+      const hour  = Number(m[4]);
+      const min   = Number(m[5]);
+      const sec   = Number(m[6]);
+      return new Date(year, month, day, hour, min, sec, 0);
+    }
+
+    function extractCategoriesAsTags(categoriesValue, mode) {
+      if (!categoriesValue || mode === 'none') return [];
+      const parts = categoriesValue.split(',').map(s => s.trim()).filter(Boolean);
+      if (!parts.length) return [];
+
+      if (mode === 'hash') {
+        return parts.map(p => p.startsWith('#') ? p : '#' + p);
+      }
+      if (mode === 'at') {
+        return parts.map(p => p.startsWith('@') ? p : '@' + p);
+      }
+      return [];
+    }
+
+    function formatEventsAsMarkdown(events, mode) {
+      if (!events.length) return '';
+
+      const byDate = new Map();
+
+      events.forEach(ev => {
+        const d = ev.start;
+        const yyyy = d.getFullYear();
+        const mm   = String(d.getMonth() + 1).padStart(2, '0');
+        const dd   = String(d.getDate()).padStart(2, '0');
+        const key  = yyyy + '-' + mm + '-' + dd;
+
+        if (!byDate.has(key)) byDate.set(key, []);
+        byDate.get(key).push(ev);
+      });
+
+      const p2 = n => String(n).padStart(2, '0');
+      const timeCompact = dt => p2(dt.getHours()) + p2(dt.getMinutes());
+
+      const lines = [];
+
+      Array.from(byDate.keys()).sort().forEach(dateKey => {
+        const dayEvents = byDate.get(dateKey).slice().sort((a, b) => a.start - b.start);
+        lines.push('## ' + dateKey);
+        lines.push('');
+
+        dayEvents.forEach(ev => {
+          const startStr = timeCompact(ev.start);
+          const endStr   = timeCompact(ev.end);
+          const tagsText = (ev.tags && ev.tags.length) ? ' ' + ev.tags.join(' ') : '';
+
+          lines.push('- [ ] ' + startStr + '-' + endStr + ' ' + ev.summary + tagsText);
+
+          if (ev.description) {
+            ev.description.split(/\r?\n/).forEach(descLine => {
+              if (descLine.trim()) {
+                lines.push('    ' + descLine.trim());
+              }
+            });
+          }
+        });
+
+        lines.push('');
+      });
+
+      return lines.join('\n');
+    }
 
     function dateFromFilename(name) {
       const base = name.replace(/\.md$/i, '');
