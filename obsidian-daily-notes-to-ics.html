@@ -117,10 +117,10 @@
 
   <div class="mode-switch" aria-label="Conversion mode">
     <button class="mode-segment active" type="button" data-mode="md-to-ics" aria-pressed="true">
-      Markdown → Calendar
+      Markdown to Calendar
     </button>
     <button class="mode-segment" type="button" data-mode="ics-to-md" aria-pressed="false">
-      Calendar → Markdown
+      Calendar to Markdown
     </button>
   </div>
 
@@ -496,7 +496,7 @@
       a.download    = 'markdown-to-calendar-' +
         now.getFullYear() +
         String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') +
+        String(now.getDate(), 10).padStart(2, '0') +
         '.' + (extMap[format] || 'ics');
       document.body.appendChild(a);
       a.click();
@@ -610,7 +610,7 @@
         'calendar-to-markdown-' +
         now.getFullYear() +
         String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') +
+        String(now.getDate(), 10).padStart(2, '0') +
         '.md';
 
       document.body.appendChild(a);
