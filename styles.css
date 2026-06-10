@@ -31,9 +31,11 @@ html, body {
 body.app-body {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
+  justify-content: flex-start;
+  gap: 0.9rem;
+  padding: 1.4rem 1.5rem 2rem;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   background:
     radial-gradient(circle at top, rgba(210, 210, 215, 0.5), transparent 55%),
@@ -41,10 +43,31 @@ body.app-body {
   color: var(--text-main);
 }
 
+.mode-switch-bar {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.app-shell-inline-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.app-inline-title {
+  font-size: 0.98rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 .app-shell {
   width: 100%;
   max-width: 960px;
-  max-height: 90vh;
+  max-height: 86vh;
   display: flex;
   flex-direction: column;
   padding: 1.75rem 2rem 1.85rem;
@@ -84,21 +107,26 @@ body.app-body {
 }
 
 .app-logo-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
   background:
     linear-gradient(145deg, #f5f5f7, #e5e5ea);
   box-shadow:
-    0 8px 16px rgba(0, 0, 0, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
+    0 5px 12px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.app-logo-circle--inside {
+  width: 40px;
+  height: 40px;
+}
+
 .app-logo-emoji {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
 }
 
 .app-title-text-group {
@@ -122,7 +150,6 @@ body.app-body {
 
 .mode-switch {
   display: inline-flex;
-  align-self: flex-start;
   border-radius: var(--radius-pill);
   border: 1px solid #d2d2d7;
   padding: 0.2rem;
@@ -132,7 +159,7 @@ body.app-body {
 .mode-segment {
   border: none;
   background: transparent;
-  padding: 0.4rem 1.05rem;
+  padding: 0.35rem 0.95rem;
   font-size: 0.9rem;
   border-radius: var(--radius-pill);
   cursor: pointer;
@@ -364,7 +391,14 @@ select {
 
 @media (max-width: 720px) {
   body.app-body {
-    padding: 1.5rem 1rem;
+    padding: 1.1rem 1rem 1.6rem;
+    gap: 0.7rem;
+  }
+
+  .mode-switch-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .app-shell {
@@ -376,7 +410,7 @@ select {
     align-items: flex-start;
   }
 
-  .app-logo-circle {
+  .app-logo-circle--inside {
     width: 36px;
     height: 36px;
   }
