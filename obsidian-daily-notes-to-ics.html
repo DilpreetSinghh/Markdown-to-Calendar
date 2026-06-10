@@ -8,25 +8,33 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="app-body">
+  <div class="mode-switch-bar" aria-label="Conversion mode">
+    <div class="app-shell-inline-logo">
+      <div class="app-logo-circle">
+        <span class="app-logo-emoji" aria-hidden="true">📅</span>
+      </div>
+      <span class="app-inline-title">Markdown &amp; Calendar</span>
+    </div>
+    <div class="mode-switch">
+      <button class="mode-segment active" type="button" data-mode="md-to-ics" aria-pressed="true">
+        Markdown to Calendar
+      </button>
+      <button class="mode-segment" type="button" data-mode="ics-to-md" aria-pressed="false">
+        Calendar to Markdown
+      </button>
+    </div>
+  </div>
+
   <div class="app-shell glass">
     <header class="app-header">
       <div class="app-title-row">
-        <div class="app-logo-circle">
+        <div class="app-logo-circle app-logo-circle--inside">
           <span class="app-logo-emoji" aria-hidden="true">📅</span>
         </div>
         <div class="app-title-text-group">
           <h1 class="app-title">Markdown &amp; Calendar</h1>
           <p class="app-subtitle">A tiny local-only web app for shuttling time-blocked notes and calendar events.</p>
         </div>
-      </div>
-
-      <div class="mode-switch" aria-label="Conversion mode">
-        <button class="mode-segment active" type="button" data-mode="md-to-ics" aria-pressed="true">
-          Markdown to Calendar
-        </button>
-        <button class="mode-segment" type="button" data-mode="ics-to-md" aria-pressed="false">
-          Calendar to Markdown
-        </button>
       </div>
     </header>
 
